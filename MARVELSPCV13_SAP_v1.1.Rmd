@@ -1,0 +1,2334 @@
+---
+title: "MARVELS 1.1 PCV13 - Statistical Analysis Plan"
+author: "Marc Henrion"
+date: "`r format(Sys.time(), '%d %B %Y')` v1.1"
+output:
+  bookdown::html_document2:
+    toc: true
+    code_folding: hide
+bibliography: MARVELS_PCV13_SAP.json
+---
+
+```{r setup, include=FALSE, fig.width=16, fig.height=9, fig.align="center", message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, error = FALSE, message = FALSE)
+
+library(tidyverse)
+library(kableExtra)
+library(knitr)
+library(grid)
+library(gridExtra)
+library(geepack)
+library(lubridate)
+library(logbin)
+library(rms)
+```
+
+# Protocol version
+
+This Statistical Analysis Plan (SAP) v1.1 is based on Protocol v1.3, dated 5 January 2022 and approved by NHSRC but includes elements from a subsequent amendment (v1.4) that was submitted but not yet approved.
+
+# Protocol summary
+
+This SAP focuses on the clinical endpoint of pneumococcus carriage and factors impacting on this. There will be a separate analysis plan for immunological and serological analyses.
+
+## Study design
+
+A double-blinded randomised controlled trial of adult healthy human participants experimentally exposed to escalating doses of *Streptococcus pneumoniae* in the nasopharynx. The intervention vaccine will be PCV-13 (Prevnar-13) and the control vaccine will be 0.9% saline. 
+
+## Study Endpoints
+
+**Primary endpoint**: Detection of the inoculated pneumococci by classical culture methods, at any time point, from nasal wash recovered from the participants at days 2, 7 and 14 following the initial pneumococcal challenge.
+
+**Secondary endpoints**: Pneumococcal carriage density and duration will also be measured to inform the primary endpoint. Innate, humoral and cellular responses to pneumococcal colonisation will be assessed by immunological assays on collected samples. These data will allow us to define the host variables that predict colonisation and protection due to PCV-13 vaccination.
+
+## Sample size
+
+As of protocol v1.3, the total sample size for MARVELS PCV-13 is n=200 participants: 40 @ CFU20,000, 80 @ FU 80,000 and 80 @ CFU 160,000. This will be the sample size for the primary analysis. Amendment for v1.4 would take the sample size up to 254, but this amendment has not yet been approved. Below we perform calculations for:
+
+* The original design of the study (n=200, but 40 @ CFU20,000, 140 @ CFU80,000 and 40 @ CFU160,000).
+* Amendment v1.3, currently approved version (n=200, but 40 @ CFU20,000, 80 @ CFU80,000 and 80 @ CFU160,000).
+* Amendment v1.4, not approved yet (n=254, with 40 @ CFU20,000, 80 @ CFU80,000 and 134 @ CFU160,000).
+
+### Original calculation
+
+The primary endpoint is the occurrence of pneumococcal colonisation determined by the presence of pneumococcus in nasal wash samples at any time point post inoculation detected using classical microbiology. Secondary endpoints will include density and duration of pneumococcal carriage in nasal wash.
+
+Based on the pneumococcal dose of 80,000 cfu/naris and using data from our feasibility study [@mortonEtal2020] and Liverpool-based [@collinsEtal2015] studies, we estimate that 60% of the control (sterile saline) group will be colonised with pneumococci following inoculation and 36% of the PCV-13 group, this equates to a 40% reduction in colonisation. We observed a 78% reduction in the UK based study [@collinsEtal2015]. However, as Malawian data demonstrates decreased efficacy for PCV-13 in carriage reduction [@swarthoutEtal2018], we have powered the study at approximately half of this effect size.
+
+The initial plan, based on the above parameters, was to randomise 67 participants per arm for 80% at a 5% significance level. To correct for any potential drop out, we will randomise 70 participants to each arm (total 140 participants for primary outcome). An additional 40 participants would be randomised (1:1, PCV13 to 0.9% saline) at the 20,000 pneumococcal dose and a further 20 participants would be randomised (1:1, PCV13 to 0.9% saline) at the 160,000 pneumococcal challenge dose. These doses would be used to explore the effects of differential pneumococcal exposure on PCV-13 vaccine efficacy.
+
+*Assumptions*
+
+The UK EHPC study [@collinsEtal2015] assumed the following:
+
+* 100 participants, 1-1 random allocation to control or vaccine arms (i.e. 50 in each group).
+* 60% carriage rate in control arm.
+* 50% carriage reduction in vaccine arm compared to control (i.e. 30% carriage).
+* $\alpha=0.05$ confidence / significance level
+
+For the Malawi MARVELS study however, these can be updated:
+
+* 48% carriage in control group in the UK study.
+* 79% carriage reduction observed in the UK study (10% carriage in vaccine arm).
+* PCV13 likely less effective in reducing carriage in a Malawian population (see e.g. PCVPA study).
+* Given carriage rates (despite at very low densities) observed at 20,000 CFU, likely higher carriage rate in control group in Malawi compared to the UK.
+
+For these reasons we will agreed on the following assumptions for our calculation:
+
+* 60% carriage rate in control arm.
+* 40% carriage reduction in vaccine arm compared to control (i.e. 36% carriage).
+* $\alpha=0.05$ confidence / significance level
+* Power = 80%
+
+
+*Sample size for primary objective*
+
+With these assumptions we will require **$\mathbf{n=}$ `r ceiling(power.prop.test(sig.level=0.05,power=0.8,p1=(1-0.4)*0.6,p2=0.6,strict=T)$n)` participants in each arm**, or **134 participants in total**.
+
+
+*Power graphs*
+
+To investigate how the sample size (per group) would change with different levels of PCV13 vaccine efficacy, we produce the graph below 
+
+```{r sampSizePowerGraphs, warning=F, fig.width=16, fig.height=9, fig.cap="Power curves for different scenarios (power=80%) from the original sample size calculation. Dotted lines indicate agreed scenario."}
+gr<-expand.grid(seq(0.4,0.8,by=0.1),seq(0,1,by=0.001))
+gr<-gr[gr[,1]>=gr[,2],]
+
+dat<-data.frame(
+	alpha=0.05,
+	nPerGroup=NA,
+	carriageRateControl=gr[,1],
+	carriageRateVaccine=gr[,2],
+	power=0.8
+)
+
+dat$pcv13CarriageReduction<-(dat$carriageRateControl-dat$carriageRateVaccine)/dat$carriageRateControl
+
+for(i in 1:nrow(dat)){
+	if(dat$carriageRateControl[i]>dat$carriageRateVaccine[i]){
+		dat$nPerGroup[i]<-ceiling(power.prop.test(strict=T,power=0.8,sig.level=dat$alpha[i],p1=dat$carriageRateControl[i],p2=dat$carriageRateVaccine[i])$n)
+	}
+}
+
+g<-ggplot(data=dat,mapping=aes(x=pcv13CarriageReduction,y=nPerGroup,color=as.factor(carriageRateControl))) +
+  geom_hline(yintercept=67,col="darkgrey",lwd=2,lty=2) +
+	geom_vline(xintercept=0.4,col="darkgrey",lwd=2,lty=2) +
+	geom_line(lwd=2) +
+  scale_color_manual(values=c("steelblue","mediumorchid","salmon","orange","greenyellow"),name="Carriage rate in the control arm.") +
+  xlab("Relative reduction in carriage due to PCV13 vaccine.") + 
+  ylab("sample size per group") + 
+  ggtitle("Power curves for different scenarios (power=80%). Dotted lines indicate agreed scenario.") +
+	theme(text = element_text(size=18)) +
+	ylim(c(0,80))
+
+print(g)
+```
+
+
+*Power for 60% carriage in controls, 67 participants per arm, 5% significance level*
+
+```{r sampSizeMinES}
+dat<-data.frame(
+  nPerGroup=67,
+  carriageRateControl=0.6,
+  carriageRateVaccine=NA,
+  pcv13CarriageReduction=seq(0.25,0.5,by=0.05),
+  power=NA
+)
+
+dat$carriageRateVaccine<-(1-dat$pcv13CarriageReduction)*dat$carriageRateControl
+
+for(i in 1:nrow(dat)){
+  dat$power[i]<-round(digits=2,power.prop.test(sig.level=0.05,n=dat$nPerGroup[i],p1=dat$carriageRateVaccine[i],p2=dat$carriageRateControl[i])$power)
+}
+
+dat %>%
+kable(col.names=c("n per group","Carriage rate\n(control arm)","Carriage rate\n(vaccine arm)","PCV-13 induced\ncarriage reduction","Power")) %>%
+  kable_styling(full_width = FALSE)
+```
+
+### Revised calculation
+
+As the study was recruiting to the CFU 80,000 arm, we observed a much lower overall carriage rate than the 48% we would have expected under the assumptions of the original calculations.
+
+For these reasons, 3 modifications were made:
+
+* Start recruiting to the higher dose of CFU 160,000 after only recruiting 80 participants to the CFU 80,000 group (assuming we will see higher carriage in the CFU160,000 group).
+* Increase sample size to recruit an additional 54 participants beyong the original plan of 200 participants.
+* Change the planned analysis so that data from all inoculation dose groups are used for assessing the primary endpoint, not just from a primary inoculation dose.
+
+The revised sample size calculation therefore assumes:
+
+* 40 participants to complete at CFU 20,000, 80 at CFU 80,000 (and we calculate how many participants needed at CFU 160,000).
+* Exactly half of the participants in each group are randomised to saline and half to PCV-13.
+* Carrier percentages overall in the CFU 20,000, CFU 80,0000 and CFU 160,000 arms are 5.0%, 27.4% and 48% respectively (i.e. we use the observed overall carriages rates at the lower doses and assume 60% carriage rate in the CFU160,000 control group).
+* PCV13 vaccine results in 40% lower carriage rate.
+
+The analysis will use a log-binomial model to estimate the adjusted relative risk of carriage, together with a 95% confidence interval. We will use the function `logbin()` from the `logbin` package [@donoghoeMarschner2018] to fit the log-binomial model. This is a robust method of fitting a log-binomial model. Nevertheless, occasionally, standard errors cannot be estimated with the log-binomial model. In this case, the analysis will revert to a logistic regression model, which does not suffer from convergence issues, and an adjusted odds ratio with 95% confidence interval will be reported rather than an adjusted risk ratio.
+
+The sample size calculation was done using simulation with 10,000 simulated datasets.
+
+Using data from all doses and a log-binomial regression, we would achieve >80% power for the primary endpoint if we recruit 134 participants to the CFU 160,000 group:
+
+```{r, eval=T}
+powSim<-function(p20,p80,p160,n20=40,n80=80,n160=80,ES=0.4,alpha=0.05,N=1e4){
+  res<-rep(0,N)
+  for(i in 1:N){
+    datTmp<-data.frame(
+      dose=factor(c(rep("cfu20,000",n20),rep("cfu80,000",n80),rep("cfu160,000",n160))),
+      treatment=factor(c(rep("S",n20/2),rep("V",n20/2),rep("S",n80/2),rep("V",n80/2),rep("S",n160/2),rep("V",n160/2)))
+    ) %>%
+      mutate(
+        pCarr=case_when(
+          dose=="cfu20,000" & treatment=="S"~p20,
+          dose=="cfu20,000" & treatment=="V"~p20*(1-ES),
+          dose=="cfu80,000" & treatment=="S"~p80,
+          dose=="cfu80,000" & treatment=="V"~p80*(1-ES),
+          dose=="cfu160,000" & treatment=="S"~p160,
+          dose=="cfu160,000" & treatment=="V"~p160*(1-ES),
+        )) %>%
+      mutate(
+        carrier=rbinom(size=1,n=n(),prob=pCarr)
+      )
+    
+    mod<-try(logbin::logbin(carrier~treatment+dose,data=datTmp),silent=TRUE)
+    
+    if(sum(class(mod)=="try-error")==0){
+      checkP<-try(summary(mod)$coefficients["treatmentV","Pr(>|z|)"]<alpha,silent=TRUE)
+      
+      if(sum(class(checkP)=="try-error")==0 & !is.na(checkP)){
+        if(checkP){
+          res[i]<-1
+        }
+      }else{
+        mod<-glm(carrier~treatment+dose,family=binomial,data=datTmp)
+        if(summary(mod)$coefficients["treatmentV","Pr(>|z|)"]<alpha){res[i]<-1}
+      }
+    }else{
+      mod<-glm(carrier~treatment+dose,family=binomial,data=datTmp)
+      if(summary(mod)$coefficients["treatmentV","Pr(>|z|)"]<alpha){res[i]<-1}
+    }
+  }
+  
+  return(list(power=mean(res),N=N,p=c(p20,p80,p160),n=c(n20,n80,n160),effectSize=ES,alpha=alpha))
+}
+
+pow<-powSim(p20=0.05/(0.5+0.6*0.5),
+       p80=0.274/(0.5+0.6*0.5),
+       p160=0.6,
+       n20=40,
+       n80=80,
+       n160=80,
+       ES=0.4,
+       alpha=0.05,
+       N=1e3
+       )
+
+print(pow)
+
+pow54<-powSim(p20=0.05/(0.5+0.6*0.5),
+       p80=0.274/(0.5+0.6*0.5),
+       p160=0.6,
+       n20=40,
+       n80=80,
+       n160=80+54,
+       ES=0.4,
+       alpha=0.05,
+       N=1e3
+       )
+
+print(pow54)
+```
+
+```{r}
+pow28<-list(power=0.80) # just to avoid error message if it is decided to skip the power calculation
+```
+
+```{r, eval=T}
+pow28<-powSim(p20=0.05/(0.5+0.6*0.5),
+       p80=0.274/(0.5+0.6*0.5),
+       p160=0.6,
+       n20=40,
+       n80=80,
+       n160=80+28,
+       ES=0.4,
+       alpha=0.05,
+       N=1e3
+       )
+```
+
+We could get away with fewer extra recruitments, for example, recruiting 28 extra individuals gives `r round(digits=2,100*pow28$power)`% power. However with recruiting 54 extra participants, we would recruit a total of 134 participants to the CFU 160,000 inoculation group - which would mean we would still be powered for an analysis in this group only according to our original assumptions (which were for the CFU 80,000 group).
+
+For the currently approved protocol version, v1.3, with the above assumptions, we will have `r round(digits=2,100*pow$power)`% power to detect an effect of the PCV-13 vaccine on experimental pneumococcal carriage.
+
+## Objectives
+
+*Main objective*
+
+Determine if PCV-13 vaccination is protective against pneumococcal carriage in health adult Malawian volunteers.
+
+*Secondary objectives*
+
+1. Determine how pneumococcal dose influences carriage in PCV-13 vaccinated adults.
+2. Determine PCV-13 protection against pneumococcal re-challenge 12-months post vaccination.
+3. Determine the protective effect of prior pneumococcal carriage in Malawian volunteers.
+4. Examine local and systemic innate, humoral and cellular responses to PCV-13 with and without pneumococcal nasal carriage.
+5. Explore participant experience in the study to monitor acceptability.
+
+# Data simulation
+
+In order to demonstrate the planned analyses and show computer code, we will simulate data like the one expected to be generated by the study.
+
+We start by reading dummy randomisation lists that we generated when the randomisation computer code was tested.
+
+```{r simData}
+rand20<-read.csv("../../Randomisation/MARVELS_PCV13_randomisation_20220525/MARVELS_PCV13_randList_20220525_CFU20k.csv")
+rand80<-read.csv("../../Randomisation/MARVELS_PCV13_randomisation_20220525/MARVELS_PCV13_randList_20220525_CFU80k.csv")
+rand160<-read.csv("../../Randomisation/MARVELS_PCV13_randomisation_20220525/MARVELS_PCV13_randList_20220525_CFU160k.csv")
+
+rand20$dose<-20000
+rand80$dose<-80000
+rand160$dose<-160000
+
+simDat<-rbind(rand20[1:40,],rand80[1:80,],rand160[1:134,])
+
+simDat$VaccName<-factor(simDat$VaccName,levels=c("Saline","PCV-13"))
+
+simDat<-simDat %>%
+  dplyr::mutate(
+    PID=paste(sep="","CHIMB",formatC(1:nrow(simDat), width = 4, format = "d", flag = "0"))
+  )
+```
+
+We then simulate 6B carriage status by dose and study arm. We assume 6.25% / 34.25% / 60.00% carriage in the saline control participants inoculated with 20,000 / 80,000 / 160,000 dose respectively and  3.75% / 20.55% / 36% for the same doses in the PCV13 arm participants. We also need to simulate non-6B carriage. For this we assume 20% carriage in unvaccinated individuals and 10% in vaccinated individuals (among those not carrying 6B). As a study limitation, at any time point a given participant can only be recorded as carrying a single serotype even if in reality they could.
+
+```{r simOutcome, fig.cap="Simulated data - carriage proportion by study arm and inoculation arm."}
+set.seed(20220805)
+
+simDat<-simDat %>% mutate(
+  visitB_date=NA,
+  visitC_date=NA,
+  visitE_date=NA,
+  visitF_date=NA,
+  visitG_date=NA,
+  visitH_date=NA,
+  visitJ_date=NA,
+  visitK_date=NA,
+  visitL_date=NA,
+  carriage=rep(0,nrow(simDat)),
+  carriageVisitE=rep(0,nrow(simDat)),
+  carriageVisitF=rep(0,nrow(simDat)),
+  carriageVisitG=rep(0,nrow(simDat)),
+  carriageNot6B=rep(0,nrow(simDat)),
+  carriageNot6BVisitC=rep(0,nrow(simDat)),
+  carriageNot6BVisitE=rep(0,nrow(simDat)),
+  carriageNot6BVisitF=rep(0,nrow(simDat)),
+  carriageNot6BVisitG=rep(0,nrow(simDat)),
+  carriageSerotypeNot6B=factor(rep(0,nrow(simDat)),levels=c("6B","7","17","18","19","NVT")),
+  carriageSerotypeVisitC=factor(rep(0,nrow(simDat)),levels=c("6B","7","17","18","19","NVT")),
+  carriageSerotypeVisitE=factor(rep(0,nrow(simDat)),levels=c("6B","7","17","18","19","NVT")),
+  carriageSerotypeVisitF=factor(rep(0,nrow(simDat)),levels=c("6B","7","17","18","19","NVT")),
+  carriageSerotypeVisitG=factor(rep(0,nrow(simDat)),levels=c("6B","7","17","18","19","NVT")),
+  vaccInoDose=factor(paste(sep=" ",VaccName,format(dose,big.mark=",",trim=TRUE)),levels=c("Saline 20,000","Saline 80,000","Saline 160,000","PCV-13 20,000","PCV-13 80,000","PCV-13 160,000"))
+)
+
+simDat$visitC_date[simDat$dose==20000]<-as.character((sort(sample(x=seq(ymd("2021-02-01"),ymd("2021-04-30"),by="week"),size=sum(simDat$dose==20000),replace=T))))
+simDat$visitC_date[simDat$dose==80000]<-as.character(sort(sample(x=seq(ymd("2021-05-03"),ymd("2021-11-30"),by="week"),size=sum(simDat$dose==80000),replace=T)))
+simDat$visitC_date[simDat$dose==160000]<-as.character(sort(sample(x=seq(ymd("2021-12-06"),ymd("2022-01-31"),by="week"),size=sum(simDat$dose==160000),replace=T)))
+
+simDat$visitE_date<-as.character(ymd(simDat$visitC_date)+9)
+simDat$visitF_date<-as.character(ymd(simDat$visitE_date)+7)
+simDat$visitG_date<-as.character(ymd(simDat$visitF_date)+14)
+simDat$visitB_date<-as.character(ymd(simDat$visitC_date)-sample(x=5:11,replace=T,size=nrow(simDat),prob=dpois(5:11,lambda=8)/sum(dpois(5:11,lambda=8))))
+
+simDat$carriage[simDat$dose==20000 & simDat$VaccName=="Saline"]<-sample(replace=T,x=0:1,size=sum(simDat$dose==20000 & simDat$VaccName=="Saline"),prob=c(1-0.0625,0.0625))
+simDat$carriage[simDat$dose==20000 & simDat$VaccName=="PCV-13"]<-sample(replace=T,x=0:1,size=sum(simDat$dose==20000 & simDat$VaccName=="PCV-13"),prob=c(1-0.0375,0.0375))
+simDat$carriage[simDat$dose==80000 & simDat$VaccName=="Saline"]<-sample(replace=T,x=0:1,size=sum(simDat$dose==80000 & simDat$VaccName=="Saline"),prob=c(1-0.3425,0.3425))
+simDat$carriage[simDat$dose==80000 & simDat$VaccName=="PCV-13"]<-sample(replace=T,x=0:1,size=sum(simDat$dose==80000 & simDat$VaccName=="PCV-13"),prob=c(1-0.2055,0.2055))
+simDat$carriage[simDat$dose==160000 & simDat$VaccName=="Saline"]<-sample(replace=T,x=0:1,size=sum(simDat$dose==160000 & simDat$VaccName=="Saline"),prob=c(1-0.6,0.6))
+simDat$carriage[simDat$dose==160000 & simDat$VaccName=="PCV-13"]<-sample(replace=T,x=0:1,size=sum(simDat$dose==160000 & simDat$VaccName=="PCV-13"),prob=c(1-0.36,0.36))
+
+simDat$carriageNot6B[simDat$VaccName=="Saline" & !(simDat$carriageVisitE==1 & simDat$carriageVisitF==1 & simDat$carriageVisitG==1)]<-sample(replace=T,x=0:1,size=sum(simDat$VaccName=="Saline" & !(simDat$carriageVisitE==1 & simDat$carriageVisitF==1 & simDat$carriageVisitG==1)),prob=c(1-0.2,0.2))
+simDat$carriageNot6B[simDat$VaccName=="PCV-13" & !(simDat$carriageVisitE==1 & simDat$carriageVisitF==1 & simDat$carriageVisitG==1)]<-sample(replace=T,x=0:1,size=sum(simDat$VaccName=="PCV-13" & !(simDat$carriageVisitE==1 & simDat$carriageVisitF==1 & simDat$carriageVisitG==1)),prob=c(1-0.1,0.1))
+
+# 40% of carriage events occur at visit E
+simDat$carriageVisitE[simDat$carriage==1]<-sample(0:1,size=sum(simDat$carriage==1),prob=c(0.6,0.4),replace=T)
+
+# 45% of carriage events occur at visit F (i.e. 75% of those not yet carrying at visit E); 75% chance to still be carrying at visit F if carrying at visit E
+simDat$carriageVisitF[simDat$carriage==1 & simDat$carriageVisitE==0]<-sample(0:1,size=sum(simDat$carriage==1 & simDat$carriageVisitE==0),prob=c(0.25,0.75),replace=T)
+simDat$carriageVisitF[simDat$carriageVisitE==1]<-sample(0:1,size=sum(simDat$carriageVisitE==1),prob=c(0.25,0.75),replace=T)
+
+# 15% of carriage events occur at visit G (i.e. those carriers that have not yet been carrying at visits E or F); 60% chance to still be carrying at visit G if carrying at visit F
+simDat$carriageVisitG[simDat$carriage==1 & simDat$carriageVisitE==0 & simDat$carriageVisitF==0]<-1
+simDat$carriageVisitG[simDat$carriageVisitF==1]<-sample(0:1,size=sum(simDat$carriageVisitF==1),prob=c(0.4,0.6),replace=T)
+
+# 25% of non-6B carriage events occur at visit C (but we use 10% as visit C gets used for not 6B carriers that do not end up simulated with carriage at either of the 4 visits)
+simDat$carriageNot6BVisitC[simDat$carriageNot6B==1]<-sample(0:1,size=sum(simDat$carriageNot6B==1),prob=c(0.9,0.1),replace=T)
+
+# 15% of non-6B carriage events occur at visit E (i.e. 20% of those not yet carrying at visit C; we use 30%); 60% chance to still be carrying at visit E if carrying at visit C
+simDat$carriageNot6BVisitE[simDat$carriageNot6B==1 & simDat$carriageNot6BVisitC==0 & simDat$carriageVisitE==0]<-sample(0:1,size=sum(simDat$carriageNot6B==1 & simDat$carriageNot6BVisitC==0 & simDat$carriageVisitE==0),prob=c(0.7,0.3),replace=T)
+simDat$carriageNot6BVisitE[simDat$carriageNot6BVisitC==1 & simDat$carriageVisitE==0]<-sample(0:1,size=sum(simDat$carriageNot6BVisitC==1 & simDat$carriageVisitE==0),prob=c(0.4,0.6),replace=T)
+simDat$carriageNot6BVisitE[simDat$carriageNot6BVisitC==1 & simDat$carriageVisitE==1]<-0
+
+# 10% of non-6B carriage events occur at visit F (i.e. 17% of those not yet carrying at visits C or E; we use 25%); 75% chance to still be carrying at visit F if carrying at visit E
+simDat$carriageNot6BVisitF[simDat$carriageNot6B==1 & simDat$carriageNot6BVisitC==0 & simDat$carriageNot6BVisitE==0 & simDat$carriageVisitF==0]<-sample(0:1,size=sum(simDat$carriageNot6B==1 & simDat$carriageNot6BVisitC==0 & simDat$carriageNot6BVisitE==0 & simDat$carriageVisitF==0),prob=c(0.75,0.25),replace=T)
+simDat$carriageNot6BVisitF[simDat$carriageNot6BVisitE==1 & simDat$carriageVisitF==0]<-sample(0:1,size=sum(simDat$carriageNot6BVisitE==1 & simDat$carriageVisitF==0),prob=c(0.25,0.75),replace=T)
+simDat$carriageNot6BVisitF[simDat$carriageNot6BVisitE==1 & simDat$carriageVisitF==1]<-0
+
+# 25% of non-6B carriage events occur at visit G (i.e. those carriers that have not yet been carrying at visits E or F); 60% chance to still be carrying at visit G if carrying at visit F
+simDat$carriageNot6BVisitG[simDat$carriageNot6B==1 & simDat$carriageNot6BVisitC==0 & simDat$carriageNot6BVisitE==0 & simDat$carriageNot6BVisitF==0 & simDat$carriageVisitG==0]<-1
+simDat$carriageNot6BVisitG[simDat$carriageNot6BVisitF==1 & simDat$carriageVisitG==0]<-sample(0:1,size=sum(simDat$carriageNot6BVisitF==1 & simDat$carriageVisitG==0),prob=c(0.4,0.6),replace=T)
+simDat$carriageNot6BVisitG[simDat$carriageNot6BVisitF==1 & simDat$carriageVisitG==1]<-0
+
+simDat$carriageNot6BVisitC[simDat$carriageNot6B==1 & simDat$carriageNot6BVisitC==0 & simDat$carriageNot6BVisitE==0 & simDat$carriageNot6BVisitF==0 & simDat$carriageNot6BVisitG==0]<-1
+
+# simulate the non-6B serotype
+simDat$carriageSerotypeNot6B[simDat$carriageNot6B==1]<-sample(c("7","17","18","19","NVT"),size=sum(simDat$carriageNot6B==1),prob=c(1,1,1,1,3),replace=T) # based on results from feasibility study
+
+# populate the carriage serotype fields for each visit
+simDat$carriageSerotypeVisitC[simDat$carriageNot6BVisitC==1]<-simDat$carriageSerotypeNot6B[simDat$carriageNot6BVisitC==1]
+simDat$carriageSerotypeVisitE[simDat$carriageNot6BVisitE==1]<-simDat$carriageSerotypeNot6B[simDat$carriageNot6BVisitE==1]
+simDat$carriageSerotypeVisitF[simDat$carriageNot6BVisitF==1]<-simDat$carriageSerotypeNot6B[simDat$carriageNot6BVisitF==1]
+simDat$carriageSerotypeVisitG[simDat$carriageNot6BVisitG==1]<-simDat$carriageSerotypeNot6B[simDat$carriageNot6BVisitG==1]
+simDat$carriageSerotypeVisitE[simDat$carriageVisitE==1]<-"6B"
+simDat$carriageSerotypeVisitF[simDat$carriageVisitF==1]<-"6B"
+simDat$carriageSerotypeVisitG[simDat$carriageVisitG==1]<-"6B"
+
+plotDat<-simDat %>%
+  group_by(vaccInoDose) %>%
+  summarise(
+    n=n(),
+    k=sum(carriage),
+    .groups="drop") %>%
+  mutate(
+    prop=k/n,
+    propLow=NA,
+    propUpp=NA
+  )
+
+for(j in 1:nrow(plotDat)){
+  ci<-binom.test(x=plotDat$k[j],n=plotDat$n[j])$conf.int
+  plotDat$propLow[j]<-ci[1]
+  plotDat$propUpp[j]<-ci[2] 
+}
+
+rm(ci)
+
+blueCols<-c(rgb(70+40,130+40,180+40,maxColorValue=255),rgb(70,130,180,maxColorValue=255),rgb(70-40,130-40,180-40,maxColorValue=255),rgb(70-70,130-100,180-100,maxColorValue=255))
+orangeCols<-c(rgb(245+10,165+40,0,maxColorValue=255),rgb(245,165,0,maxColorValue=255),rgb(245-10,165-40,0,maxColorValue=255),rgb(245-30,165-120,0,maxColorValue=255))
+
+plotDat %>%
+  ggplot(mapping=aes(x=vaccInoDose,y=prop,ymin=propLow,ymax=propUpp,fill=vaccInoDose)) +
+  geom_bar(stat="identity",alpha=0.9) +
+  geom_errorbar(width=0.2,col="darkgrey") +
+  scale_fill_manual(values=c(blueCols,orangeCols)) +
+  xlab("study arm & inoculation dose") +
+  ylab("carriage proportion") +
+  guides(fill="none") +
+  theme_light() +
+  labs(title="Simulated data: carriage proportion per study arm and inoculation dose.",caption="The confidence interval bars are only indicative of how wide confidence intervals can be expected for such data.\nWe obviously know the true underlying proportions here as the data was simulated.\n(6.25% / 34.25% / 60.00% in the unvaccinated arm and 3.75% / 20.55% / 36.00% in the vaccinated arm).")
+```
+
+We also simulate carriage density and participant demographic data.
+
+```{r simDensity, fig.cap="Simulated data - carraige density by study arm."}
+simDat<-simDat %>%
+  mutate(
+    densityFirstCarriage=NA,
+    densityVisitC=NA,
+    densityVisitE=NA,
+    densityVisitF=NA,
+    densityVisitG=NA
+  )
+
+for(v in c("C","E","F","G")){
+  if(v=="C"){
+    idxS<-which(simDat[,paste(sep="","carriageNot6BVisit",v)]==1 & simDat$VaccName=="Saline")
+    idxP<-which(simDat[,paste(sep="","carriageNot6BVisit",v)]==1 & simDat$VaccName=="PCV-13")
+  }else{
+    idxS<-which((simDat[,paste(sep="","carriageNot6BVisit",v)]==1 | simDat[,paste(sep="","carriageVisit",v)]==1) & simDat$VaccName=="Saline")
+    idxP<-which((simDat[,paste(sep="","carriageNot6BVisit",v)]==1 | simDat[,paste(sep="","carriageVisit",v)]==1) & simDat$VaccName=="PCV-13")
+  }
+  
+  simDat[idxS,paste(sep="","densityVisit",v)]<-10^(rnorm(length(idxS),mean=3,sd=2/(2*qnorm(0.975))))
+  simDat[idxP,paste(sep="","densityVisit",v)]<-10^(rnorm(length(idxP),mean=2,sd=2/(2*qnorm(0.975))))
+  
+  simDat$densityFirstCarriage[is.na(simDat$densityFirstCarriage) & !is.na(simDat[,paste(sep="","densityVisit",v)])]<-simDat[is.na(simDat$densityFirstCarriage) & !is.na(simDat[,paste(sep="","densityVisit",v)]),paste(sep="","densityVisit",v)]
+}
+
+simDat %>%
+  filter(carriage==1) %>%
+  ggplot(mapping=aes(x=VaccName,y=densityFirstCarriage,col=VaccName)) +
+  geom_boxplot() +
+  geom_jitter(width=0.25,alpha=0.5) +
+  scale_y_continuous(trans="log10") +
+  scale_color_manual(values=c("steelblue","orange")) +
+  theme_light() +
+  xlab("vaccination arm") +
+  ylab("density at first carriage (CFU/ml nasal wash)") +
+  labs(title="Simulated data: distribution of density at first carriage.")
+```
+
+```{r simParticipantCharacteristics}
+simDat<-simDat %>%
+  mutate(
+    sex=factor(sample(x=c("M","F"),size=n(),replace=TRUE),levels=c("F","M")),
+    age=rpois(lambda=25,n=n()),
+    BMI=rnorm(n(),mean=22,sd=1.25)
+  )
+
+while(sum(simDat$age<18)>0){
+  simDat$age[simDat$age<18]<-rpois(lambda=25,n=sum(simDat$age<18))
+}
+```
+
+As participants who withdraw or become ineligible before the inoculation visit will be replaced, we expect near to no loss-to-follow-up.
+
+```{r simulateCarriageDuration}
+simDat<-simDat %>%
+  mutate(
+    visitFirstCarriage6B=case_when(
+      carriageVisitE==1~"E",
+      carriageVisitE==0 & carriageVisitF==1~"F",
+      carriageVisitE==0 & carriageVisitF==0 & carriageVisitG==1~"G",
+      TRUE~NA_character_
+    ),
+    visitFirstCarriageNot6B=case_when(
+      carriageNot6BVisitC==1~"C",
+      carriageNot6BVisitC==0 & carriageNot6BVisitE==1~"E",
+      carriageNot6BVisitC==0 & carriageNot6BVisitE==0 & carriageNot6BVisitF==1~"F",
+      carriageNot6BVisitC==0 & carriageNot6BVisitE==0 & carriageNot6BVisitF==0 & carriageNot6BVisitG==1~"G",
+      TRUE~NA_character_
+    ),
+    durationFirstCarriage6B=case_when(
+      carriageVisitE==1 & carriageVisitF==0~7/2,
+      carriageVisitE==1 & carriageVisitF==1 & carriageVisitG==0~7+14/2,
+      carriageVisitE==1 & carriageVisitF==1 & carriageVisitG==1~7+14,
+      carriageVisitE==0 & carriageVisitF==1 & carriageVisitG==0~14/2,
+      carriageVisitE==0 & carriageVisitF==1 & carriageVisitG==1~14
+    ),
+    durationFirstCarriageNot6B=case_when(
+      carriageNot6BVisitC==1 & carriageNot6BVisitE==0~9/2,
+      carriageNot6BVisitC==1 & carriageNot6BVisitE==1 & carriageNot6BVisitF==0~9+7/2,
+      carriageNot6BVisitC==1 & carriageNot6BVisitE==1 & carriageNot6BVisitF==1 & carriageNot6BVisitG==0~9+7+14/2,
+      carriageNot6BVisitC==1 & carriageNot6BVisitE==1 & carriageNot6BVisitF==1 & carriageNot6BVisitG==1~9+7+14,
+      carriageNot6BVisitC==0 & carriageNot6BVisitE==1 & carriageNot6BVisitF==0~7/2,
+      carriageNot6BVisitC==0 & carriageNot6BVisitE==1 & carriageNot6BVisitF==1 & carriageNot6BVisitG==0~7+14/2,
+      carriageNot6BVisitC==0 & carriageNot6BVisitE==1 & carriageNot6BVisitF==1 & carriageNot6BVisitG==1~7+14,
+      carriageNot6BVisitC==0 & carriageNot6BVisitE==0 & carriageNot6BVisitF==1 & carriageNot6BVisitG==0~14/2,
+      carriageNot6BVisitC==0 & carriageNot6BVisitE==0 & carriageNot6BVisitF==1 & carriageNot6BVisitG==1~14,
+    )
+  )
+```
+
+```{r inoculaDensitiesSimulate}
+inoIDNum20<-sum(simDat$dose==20000) %/% 3 # average 3 participants with same dose
+inoIDNum80<-sum(simDat$dose==80000) %/% 3 # average 3 participants with same dose
+inoIDNum160<-sum(simDat$dose==160000) %/% 3 # average 3 participants with same dose
+
+
+simDat<-simDat %>%
+  dplyr::mutate(inoID=NA)
+
+simDat$inoID[simDat$dose==20000]<-sort(paste(sep="","ino20-",sample(formatC(width=3,format="d",flag="0",1:inoIDNum20),size=sum(simDat$dose==20000),replace=TRUE)))
+simDat$inoID[simDat$dose==80000]<-sort(paste(sep="","ino80-",sample(formatC(width=3,format="d",flag="0",1:inoIDNum80),size=sum(simDat$dose==80000),replace=TRUE)))
+simDat$inoID[simDat$dose==160000]<-sort(paste(sep="","ino160-",sample(formatC(width=3,format="d",flag="0",1:inoIDNum160),size=sum(simDat$dose==160000),replace=TRUE)))
+
+inoDat<-data.frame(
+  inoID=unique(simDat$inoID)
+) %>%
+  dplyr::mutate(
+    dose=case_when(
+      grepl(inoID,pattern="20")~20000,
+      grepl(inoID,pattern="80")~80000,
+      grepl(inoID,pattern="160")~160000,
+      TRUE~NA_real_
+    )) %>%
+  dplyr::mutate(doseConcPre=rnorm(n=n(),mean=dose,sd=0.05*dose)) %>%
+  dplyr::mutate(doseConcPost=rnorm(n=n(),mean=doseConcPre-1000,sd=0.075*dose)) %>%
+  dplyr::mutate(doseConcAvg=(doseConcPre+doseConcPost)/2)
+
+simDat<-simDat %>%
+  dplyr::mutate(
+    doseConcPre=inoDat$doseConcPre[match(inoID,inoDat$inoID)],
+    doseConcPost=inoDat$doseConcPre[match(inoID,inoDat$inoID)],
+    doseConcAvg=(doseConcPre+doseConcPost)/2
+  )
+```
+
+We also need to simulate participants who will continue in the second phase of the study. We assume that 20% will either withdraw or have become ineligible before phase 2 starts. We use the following assumptions (this is purely to be able to produce mock figures and tables; this is not for the purpose of power calculation -- Phase 2 analyses are exploratory and not powered for):
+
+* CFU 80,000 dose is used for inoculation.
+* 80% of Phase 1 participants take part in Phase 2.
+* 34.25% of saline randomised participants who did not develop carriage in Phase 1 will become carriers in Phase 2.
+* PCV-13 vaccination from Phase 1 results in 40% lower carriage rate.
+* Serotype 6B carriage during Phase 1 results in 35% lower carriage rate.
+* PCV-13 vaccine together with serotype 6B carriage in phase 1 results in an additional 20% drop in carriage rate (in addition to the 40% and 35% separately for PCV-13 and prior carriage respectively).
+
+```{r phase2Sim}
+simDat<-simDat %>%
+  mutate(
+    phase2=sample(c("no","yes"),replace=TRUE,size=n(),prob=c(0.2,0.8))
+  ) %>%
+  mutate(
+    phase2CarriageP=case_when(
+      phase2=="yes" & VaccName=="Saline" & carriage==0~0.3425,
+      phase2=="yes" & VaccName=="PCV-13" & carriage==0~0.3425*(1-0.4),
+      phase2=="yes" & VaccName=="Saline" & carriage==1~0.3425*(1-0.35),
+      phase2=="yes" & VaccName=="PCV-13" & carriage==1~0.3425*(1-0.4)*(1-0.35)*(1-0.2),
+      TRUE~NA_real_
+    )
+  ) %>%
+  mutate(
+    phase2Carriage=rbinom(n=n(),size=1,prob=phase2CarriageP),
+    student=rbinom(n=n(),size=1,prob=0.6),
+    smoking=sample(size=n(),x=c("never smoker","past smoker","current smoker"),prob=c(0.8,0.15,0.05),replace=TRUE)
+  )
+```
+
+# Statistical Analysis Plan
+
+The R code to generate the results is embedded in this document. By default it is hidden, but can be displayed by clicking on the `Code` boxes on the right hand side.
+
+## General considerations
+
+The reporting of this study will be prepared in accordance with the CONSORT guidelines [@schulzEtal2010].
+
+All continuous data variables will be summarized using the following descriptive statistics:
+
+* N (size of relevant analysis population)
+* n (size of analysis population without missing values)
+* arithmetic mean (or geometric mean if more appropriate)
+* standard deviation (SD)
+* median
+* 25th percentile value (P25), 75th percentile value (P75) and interquartile range (IQR)
+* minimum and maximum (where relevant)
+
+The proportion / percentage of observed levels will be reported for all binary and categorical measures. When appropriate, corresponding exact 95% confidence intervals (CIs) for proportions will be included.
+
+For statistical test, a significance level of 5% will be used. All p-values will be reported to 3 decimal digits.
+
+### Reporting conventions
+
+P-values $\geq 0.001$ and $\leq 0.999$ will be reported to 3 decimal places; p-values less than 0.001 will be reported as "< 0.001". The mean, standard deviation, median, IQR and other statistics will be reported to one decimal place greater than the original data. Minimum and maximum values will use the same number of decimal places as the original data. Proportions will be presented as two decimal places; values greater than zero but $<0.01$ will be presented as "< 0.01". Percentages will be reported to 2 decimal places; values greater than zero but $<0.01\%$ will be presented as "< 0.01%"; values greater than $99.99\%$ but less than $100\%$ will be reported as "> 99.99%". Estimated parameters, not on the same scale as raw observations (e.g. regression coefficients) will be reported to 3 significant figures.
+
+### Missing data
+
+As mentioned above, as participants who withdraw or become ineligible before the inoculation visit will be replaced, we expect near to no loss-to-follow-up. For this reason, the main analysis will be a complete-case analysis. For sensitivity analyses, we will, for each of the main objectives, conduct worst-case and best-case scenario imputations and analyse the data with these imputations. Clinical criteria might also be used to impute missing outcome data where relevant, and any such imputation will be used as part of sensitivity analyses, not as the main analysis.
+
+While we do not anticipate much missing data, should missing data, for whatever reason, be more substantial than expected, we will use multiple imputation for the analysis. Specifically we will use fully conditional specification (FCS) as implemented in Multiple Imputation using Chained Equations (MICE, @vanBuurenGroothuisOudshoorn2018) and the `mice` package in R, with m=5 imputations. 
+
+### Technical details
+
+The R environment for statistical computing (v4.1.0 or later) will be used for all analyses.
+
+All analysis code will be made publicly available under an MIT or GNU GPL v3.0 license on GitHub.
+
+### Analysis population
+
+For the primary analyses, the analysis will use the intention-to-treat (ITT) population: participants' data will be analysed according to the study arm (PCV13 vaccine or 0.9% saline) they were randomised to.
+
+The main objective analysis will only use participants inoculated with the 80,000 CFU dose.
+
+### Immunological and serological data
+
+There will be a separate immunological and serological data analysis plan and as such these analyses are not specified in this document.
+
+## CONSORT diagram and participant characteristics
+
+The very first analysis we will do will be descriptive: we will summarise the screening, recruitment, randomisation to vaccination arms, complete follow-up numbers using a standard CONSORT flow diagram as illustrated on Figure 1.
+
+```{r CONSORT, fig.cap="(DUMMY FIGURE) CONSORT diagram."}
+include_graphics("../CONSORT/MARVELS_PCV13_ConsortDiagram_withTotals_20210823.png")
+```
+
+```{r mainObjTable}
+tab<-table(simDat$VaccName,simDat$carriage,simDat$dose)
+tabFull<-as.data.frame(rbind(cbind(20000,tab[,,1]),cbind(80000,tab[,,2]),cbind(160000,tab[,,3])))
+
+tabFull<-tabFull %>%
+  mutate(
+    arm=case_when(
+      grepl(row.names(tabFull),pattern="PCV")~"PCV-13",
+      grepl(row.names(tabFull),pattern="Saline")~"Saline"
+    )
+  )
+
+colnames(tabFull)<-c("dose","noCarriage","carriage","arm")
+tabFull<-tabFull[,c("arm","dose","noCarriage","carriage")]
+```
+
+We will also list participant characteristics (sex, age, BMI) and screening visit measurements (percentage of participant with current natural carriage by *S. pneumoniae* other than serotype 6B, full blood count results, cytokine levels) by study arm and by inoculation dose (Table 1).
+
+```{r mainObjAnalysisParticipantCharacteristics}
+sumFun<-function(.data){
+  .data %>%
+    dplyr::summarise(n=n(),
+                     sexMale=sum(na.rm=T,sex=="M"),
+                     sexMaleProp=sum(na.rm=T,sex=="M")/sum(!is.na(sex)),
+                     ageMedian=median(na.rm=T,age),
+                     age25th=quantile(na.rm=T,age,probs=0.25),
+                     age75th=quantile(na.rm=T,age,probs=0.75),
+                     BMIMedian=median(na.rm=T,BMI),
+                     BMI25th=quantile(na.rm=T,BMI,probs=0.25),
+                     BMI75th=quantile(na.rm=T,BMI,probs=0.75),
+                     smokingNever=sum(na.rm=T,smoking=="never smoker"),
+                     smokingNeverProp=sum(na.rm=T,smoking=="never smoker")/sum(!is.na(smoking)),
+                     smokingPast=sum(na.rm=T,smoking=="past smoker"),
+                     smokingPastProp=sum(na.rm=T,smoking=="past smoker")/sum(!is.na(smoking)),
+                     smokingCurrent=sum(na.rm=T,smoking=="current smoker"),
+                     smokingCurrentProp=sum(na.rm=T,smoking=="current smoker")/sum(!is.na(smoking)),
+                     .groups="drop"
+    )
+}
+
+reformatFun<-function(dat,var,type,rowIdx,roundDigits=NULL){
+  # type needs to be one of "medianIQR", "meanSD", "nProp"
+  if(type=="medianIQR"){
+    if(is.null(roundDigits)){roundDigits=2}
+    tmp<-as.numeric(dat[rowIdx,paste(sep="",var,c("Median","25th","75th"))])
+    tmp<-c(format(nsmall=roundDigits,round(tmp[1],digits=roundDigits)),paste(sep="","(",format(nsmall=roundDigits,round(tmp[2],digits=roundDigits)),",",format(nsmall=roundDigits,round(tmp[3],digits=roundDigits)),")"))
+  }else if(type=="meanSD"){
+    if(is.null(roundDigits)){roundDigits=2}
+    tmp<-as.numeric(dat[rowIdx,paste(sep="",var,c("Mean","Sd"))])
+    tmp<-c(format(nsmall=roundDigits,round(tmp[1],digits=roundDigits)),paste(sep="","(",format(nsmall=roundDigits,round(tmp[2],digits=roundDigits)),")"))
+  }else if(type=="nProp"){
+    if(is.null(roundDigits)){roundDigits=1}
+    tmp<-as.numeric(dat[rowIdx,paste(sep="",var,c("","Prop"))])
+    tmp<-c(tmp[1],paste(sep="","(",format(nsmall=roundDigits,round(100*tmp[2],digits=roundDigits)),"%)"))
+  }
+  
+  return(tmp)
+}
+
+demoDatAll<-simDat %>%
+  sumFun()
+
+demoDatByVacc<-simDat %>%
+  group_by(VaccName) %>%
+  sumFun()
+
+demoDatKable<-data.frame(
+  variable=c("Participants","Complete follow-up data","Sex: male","Age","BMI (kg/m^2^)","Smoking status: never smoker","Smoking status: past smoker","Smoking status: current smoker"),
+  statistics=c("n (% out of total)","n (%)","n (%)","median (IQR)","median (IQR)","n (%)","n (%)","n (%)"),
+  Astat1=NA,
+  Astat2=NA,
+  Vstat1=NA,
+  Vstat2=NA,
+  Cstat1=NA,
+  Cstat2=NA
+)
+
+demoDatKable[1,-c(1:2)]<-c(nrow(simDat),
+                           paste(sep="","(",format(nsmall=1,round(100*nrow(simDat)/nrow(simDat),digits=1)),"%)"),
+                           sum(simDat$VaccName=="PCV-13"),
+                           paste(sep="","(",format(nsmall=1,round(100*sum(simDat$VaccName=="PCV-13")/nrow(simDat),digits=1)),"%)"),
+                           sum(simDat$VaccName=="Saline"),
+                           paste(sep="","(",format(nsmall=1,round(100*sum(simDat$VaccName=="Saline")/nrow(simDat),digits=1)),"%)"))
+
+demoDatKable[demoDatKable$variable=="Complete follow-up data",-c(1:2)]<-c(sum(rowSums(is.na(simDat[,c("visitC_date","visitE_date","visitF_date","visitG_date")]))==0),
+                           paste(sep="","(",format(nsmall=1,round(100*sum(rowSums(is.na(simDat[,c("visitC_date","visitE_date","visitF_date","visitG_date")]))==0)/nrow(simDat),digits=1)),"%)"),
+                           sum(rowSums(is.na(simDat[simDat$VaccName=="PCV-13",c("visitC_date","visitE_date","visitF_date","visitG_date")]))==0),
+                           paste(sep="","(",format(nsmall=1,round(100*sum(rowSums(is.na(simDat[simDat$VaccName=="PCV-13",c("visitC_date","visitE_date","visitF_date","visitG_date")]))==0)/sum(simDat$VaccName=="PCV-13"),digits=1)),"%)"),
+                           sum(rowSums(is.na(simDat[simDat$VaccName=="PCV-13",c("visitC_date","visitE_date","visitF_date","visitG_date")]))==0),
+                           paste(sep="","(",format(nsmall=1,round(100*sum(rowSums(is.na(simDat[simDat$VaccName=="Saline",c("visitC_date","visitE_date","visitF_date","visitG_date")]))==0)/sum(simDat$VaccName=="Saline"),digits=1)),"%)"))
+
+demoDatKable[demoDatKable$variable=="Sex: male",-c(1:2)]<-c(reformatFun(dat=demoDatAll,var="sexMale",type="nProp",rowIdx=1),reformatFun(dat=demoDatByVacc,var="sexMale",type="nProp",rowIdx=2),reformatFun(dat=demoDatByVacc,var="sexMale",type="nProp",rowIdx=1))
+demoDatKable[demoDatKable$variable=="Age",-c(1:2)]<-c(reformatFun(dat=demoDatAll,var="age",type="medianIQR",rowIdx=1),reformatFun(dat=demoDatByVacc,var="age",type="medianIQR",rowIdx=2),reformatFun(dat=demoDatByVacc,var="age",type="medianIQR",rowIdx=1))
+demoDatKable[demoDatKable$variable=="BMI (kg/m^2^)",-c(1:2)]<-c(reformatFun(dat=demoDatAll,var="BMI",type="medianIQR",rowIdx=1),reformatFun(dat=demoDatByVacc,var="BMI",type="medianIQR",rowIdx=2),reformatFun(dat=demoDatByVacc,var="BMI",type="medianIQR",rowIdx=1))
+demoDatKable[demoDatKable$variable=="Smoking status: never smoker",-c(1:2)]<-c(reformatFun(dat=demoDatAll,var="smokingNever",type="nProp",rowIdx=1),reformatFun(dat=demoDatByVacc,var="smokingNever",type="nProp",rowIdx=2),reformatFun(dat=demoDatByVacc,var="smokingNever",type="nProp",rowIdx=1))
+demoDatKable[demoDatKable$variable=="Smoking status: past smoker",-c(1:2)]<-c(reformatFun(dat=demoDatAll,var="smokingPast",type="nProp",rowIdx=1),reformatFun(dat=demoDatByVacc,var="smokingPast",type="nProp",rowIdx=2),reformatFun(dat=demoDatByVacc,var="smokingPast",type="nProp",rowIdx=1))
+demoDatKable[demoDatKable$variable=="Smoking status: current smoker",-c(1:2)]<-c(reformatFun(dat=demoDatAll,var="smokingCurrent",type="nProp",rowIdx=1),reformatFun(dat=demoDatByVacc,var="smokingCurrent",type="nProp",rowIdx=2),reformatFun(dat=demoDatByVacc,var="smokingCurrent",type="nProp",rowIdx=1))
+
+demoDatKable %>%
+  kable(col.names=rep("",ncol(demoDatKable)),caption="(DUMMY TABLE) Participant characteristics (at screening).") %>%
+  kable_styling(full_width=F) %>%
+  add_header_above(c(" "," ","All"=2,"PCV-13"=2,"Saline"=2)) %>%
+  pack_rows("Study characteristics",1,2) %>%
+  pack_rows("Demographics",3,4) %>%
+  pack_rows("Physiology",5,5) %>%
+  pack_rows("Life style",6,8)
+```
+
+## Phase 1
+
+### Primary analysis
+
+The main objective analysis will compare the proportion of pneumococcal carriage between the PCV13 and the saline arms. As stated above in the analysis population section, the main analysis will use data from all participants, whether inoculated with the 20,000, the 80,000 or the 160,000 CFU dose. This comparison will be done using a log-binomial regression model, with predictor variables for inoculation dose group (the CFU 160,000 group will be used as reference as the largest group) and vaccine arm:
+
+$$
+\log(\pi) = \log\left(E[Y|X_{20,000},X_{80,000},X_{PCV13}]\right) = \beta_0 + \beta_{20,000}\cdot X_{20,000} + \beta_{80,000}\cdot X_{80,000} + \beta_{PCV13}\cdot X_{PCV13} 
+$$
+where $\pi$ is the probability of being a carrier, $Y$ is a random variable indicating serotype 6B carriage status, $X_{20,000}$ is an indicator variable for whether or not a participant was inoculated at CFU 20,000, similarly for $X_{80,000}$, and $X_{PCV13}$ is an indicator variable for vaccination (with PCV13 vaccine) status. $\beta_0, \beta_{20,000}, \beta_{80,000}, \beta_{PCV13}$ are the regression coefficients that will be simulated. $Y|X_{20,000},X_{80,000},X_{PCV13}$ follows a binomial distribution with parameter $\pi$.
+
+For our main analysis of the effectiveness of the PCV13 vaccine, we will test the null hypothesis $H_0$ of no effect of the PCV13 vaccine against the alternative hypothesis $H_1$ that it has an effect on the carriage probability:
+
+$$
+H_0:\qquad\beta_{PCV13} = 0 \\
+H_1:\qquad\beta_{PCV13} \neq 0
+$$
+
+We will report the estimated risk ratio from the log-binomial regression model $exp(\hat{\beta}_{PCV13})$ together with its 95% confidence interval.
+
+Log-binomial models can fail to converge or to compute standard errors. We will use the `logbin` R package which overcomes most of these issues. However, occasionally the log-binomial model will still fail to fit. In this case, the analysis will revert to a logistic regression model and adjusted odds ratios will be reported rather than adjusted relative risks. 
+
+Results from the log-binomial regression model will be displayed as a set of 2x2 tables (one for each inoculation dose and one for the data from all doses combined), stacked on top of each other. While we report the p-values from exact Fisher tests for each 2x2 table, the primary analysis and conclusion are based on the p-value from the log-binomial regression as detailed above.
+
+```{r mainObjAnalysis}
+simDat<-simDat %>%
+  mutate(doseGroup=factor(paste(sep=" ","CFU",dose),levels=c("CFU 160000","CFU 80000","CFU 20000")))
+
+mod<-logbin::logbin(carriage~VaccName+doseGroup,data=simDat)
+
+simDat20<-simDat %>% dplyr::filter(dose==20000)
+simDat80<-simDat %>% dplyr::filter(dose==80000)
+simDat160<-simDat %>% dplyr::filter(dose==160000)
+
+tab20<-table(simDat20$VaccName,simDat20$carriage)
+tab80<-table(simDat80$VaccName,simDat80$carriage)
+tab160<-table(simDat160$VaccName,simDat160$carriage)
+tabAll<-table(simDat$VaccName,simDat$carriage)
+tabFull<-rbind(tab20,tab80,tab160,tabAll)
+
+pFish20<-fisher.test(tab20)$p.value
+pFish20<-ifelse(pFish20>=0.001,paste(sep=""," = ",format(nsmall=3,round(digits=3,pFish20)))," < 0.001")
+pFish80<-fisher.test(tab80)$p.value
+pFish80<-ifelse(pFish80>=0.001,paste(sep=""," = ",format(nsmall=3,round(digits=3,pFish80)))," < 0.001")
+pFish160<-fisher.test(tab160)$p.value
+pFish160<-ifelse(pFish160>=0.001,paste(sep=""," = ",format(nsmall=3,round(digits=3,pFish160)))," < 0.001")
+pFishAll<-fisher.test(tabAll)$p.value
+pFishAll<-ifelse(pFishAll>=0.001,paste(sep=""," = ",format(nsmall=3,round(digits=3,pFishAll)))," < 0.001")
+
+pGlm<-summary(mod)$coefficients["VaccNamePCV-13","Pr(>|z|)"]
+rrGlmVacc<-exp(c(summary(mod)$coefficients["VaccNamePCV-13","Estimate"],confint(mod)["VaccNamePCV-13",]))
+
+tabFull %>%
+  kable(caption=paste(sep="","(DUMMY TABLE) Number of participants colonised with experimental S. Pneumoniae serotype 6B by study arm and inoculation dose. According to a log-binomial regression model which also adjusts for inoculation dose, there is ",ifelse(pGlm<0.05,"a","no")," statistically significant effect of PCV-13 vaccine on the probability of serotype 6B carriage (RR ",format(nsmall=2,round(digits=2,rrGlmVacc[1])),", 95% CI (",paste(collapse=", ",format(nsmall=2,round(digits=2,rrGlmVacc[2:3]))),"), p ",ifelse(pGlm>=0.001,paste(sep="","= ",format(nsmall=3,round(digits=3,pGlm))),"< 0.001"),")."),col.names=c("Not colonised","Colonised"),row.names=T) %>%
+  kable_styling(full_width = F) %>%
+  pack_rows(paste(sep="","CFU 20,000 (Fisher test p",pFish20,")"),1,2) %>%
+  pack_rows(paste(sep="","CFU 80,000 (Fisher test p",pFish80,")"),3,4) %>%
+  pack_rows(paste(sep="","CFU 160,000 (Fisher test p",pFish160,")"),5,6) %>%
+  pack_rows(paste(sep="","All doses (Fisher test p",pFishAll,")"),7,8)
+```
+
+In addition we will summarise the model fit in a table reporting the estimated coefficients, their standard errors and associated p-values.
+
+```{r mainObjAnalysisModelSummary}
+modRes<-summary(mod)$coefficients %>%
+  as.data.frame() %>%
+  mutate(
+    parameter=case_when(
+      rownames(summary(mod)$coefficients)=="(Intercept)"~"(Intercept)",
+      rownames(summary(mod)$coefficients)=="VaccNamePCV-13"~"PCV-13 vaccine",
+      rownames(summary(mod)$coefficients)=="doseGroupCFU 20000"~"Dose: CFU 20,000",
+      rownames(summary(mod)$coefficients)=="doseGroupCFU 80000"~"Dose: CFU 80,000"
+    )
+  )
+
+colnames(modRes)<-c("Estimate","Std.err","z.value","p.value","parameter")
+
+modRes %>%
+  dplyr::select(parameter,Estimate,Std.err,z.value,p.value) %>%
+  mutate(p.value=ifelse(parameter!="(Intercept)" & p.value<0.05,cell_spec(format(nsmall=3,round(digits=3,p.value)),bold=T),cell_spec(format(nsmall=3,round(digits=3,p.value)),bold=F))) %>%
+  kable(row.names = FALSE,col.names=c("","Estimate","Std. error","Z statistic","p-value"),escape=FALSE,caption=paste(sep="","(DUMMY TABLE) Summary of the log-binomial regression model fit. The baseline carriage risk for a saline-randomised participant inoculated at the CFU 160,000 dose is ",format(digits=1,round(digits=1,100*exp(modRes["(Intercept)","Estimate"]))),"%, 95% CI (",paste(collapse="%, ",format(nsmall=1,round(digits=1,100*exp(c(modRes["(Intercept)","Estimate"]-qnorm(0.975)*modRes["(Intercept)","Std.err"],modRes["(Intercept)","Estimate"]+qnorm(0.975)*modRes["(Intercept)","Std.err"]))))),"%). There is ",ifelse(pGlm<0.05,"a","no")," statistically significant effect of PCV-13 vaccine on the probability of serotype 6B carriage (RR ",format(nsmall=2,round(digits=2,rrGlmVacc[1])),", 95% CI (",paste(collapse=", ",format(nsmall=2,round(digits=2,rrGlmVacc[2:3]))),"), p ",ifelse(pGlm>=0.001,paste(sep="","= ",format(nsmall=3,round(digits=3,pGlm))),"< 0.001"),")."),digits=3) %>%
+  kable_styling(full_width = FALSE)
+```
+
+We will summarise the carriage data in a graph as well.
+
+```{r mainObjAnalysisBarPlotStratAndAll, fig.cap="(DUMMY FIGURE) Serotype 6B carriage proportions per study arm and inoculation dose."}
+plotDat<-simDat %>%
+  group_by(vaccInoDose,VaccName,dose) %>%
+  summarise(
+    n=n(),
+    k=sum(carriage),
+    .groups="drop") %>%
+  mutate(
+    prop=k/n,
+    propLow=NA,
+    propUpp=NA
+  )
+
+plotDatTmp<-simDat %>%
+  group_by(VaccName) %>%
+  summarise(
+    n=n(),
+    k=sum(carriage),
+    .groups="drop") %>%
+  mutate(
+    prop=k/n,
+    propLow=NA,
+    propUpp=NA
+  ) %>%
+  mutate(
+    dose="(any dose)",
+    vaccInoDose=paste(sep=" ",VaccName,"(any dose)")
+  )
+
+plotDat<-rbind(plotDat,plotDatTmp) %>%
+  dplyr::select(vaccInoDose,VaccName,dose,n,k,prop,propLow,propUpp)
+
+for(j in 1:nrow(plotDat)){
+  ci<-binom.test(x=plotDat$k[j],n=plotDat$n[j])$conf.int
+  plotDat$propLow[j]<-ci[1]
+  plotDat$propUpp[j]<-ci[2] 
+}
+
+rm(ci,plotDatTmp)
+
+plotDat$dose<-fct_recode(factor(plotDat$dose,levels=c("20000","80000","160000","(any dose)")),"20,000 CFU"="20000","80,000 CFU"="80000","160,000 CFU"="160000","(any dose)"="(any dose)")
+plotDat<-plotDat[order(plotDat$VaccName,plotDat$dose),]
+
+plotDat<-plotDat %>%
+  mutate(col=c(blueCols,orangeCols))
+
+plotDat$vaccInoDose<-factor(plotDat$vaccInoDose,levels=c("Saline 20,000","Saline 80,000","Saline 160,000","Saline (any dose)","PCV-13 20,000","PCV-13 80,000","PCV-13 160,000","PCV-13 (any dose)"))
+
+yMax<-max(c(plotDat$propUpp))
+
+g1<-plotDat %>%
+  filter(VaccName=="Saline") %>%
+  ggplot(mapping=aes(x=dose,y=prop,ymin=propLow,ymax=propUpp,fill=dose,label=paste(sep=" / ",k,n))) +
+  geom_bar(stat="identity",alpha=0.9) +
+  geom_errorbar(width=0.2,col="grey") +
+  geom_text(y=-0.02,col="grey50",fontface = "bold") +
+  scale_fill_manual(values=c(rgb(70+40,130+40,180+40,maxColorValue=255),rgb(70,130,180,maxColorValue=255),rgb(70-40,130-40,180-40,maxColorValue=255),rgb(70-70,130-100,180-100,maxColorValue=255))) +
+  xlab("Study arm & inoculation dose") +
+  ylab("Carriage proportion") +
+  guides(fill="none") +
+  theme_light() +
+  labs(title="Saline") +
+  ylim(c(0,yMax)) +
+  geom_vline(xintercept=3.5,col="darkgrey",lwd=1.25,lty=2) +
+  theme(axis.text.x = element_text(angle = 45, hjust=1))
+
+g2<-plotDat %>%
+  filter(VaccName=="PCV-13") %>%
+  ggplot(mapping=aes(x=dose,y=prop,ymin=propLow,ymax=propUpp,fill=dose,label=paste(sep=" / ",k,n))) +
+  geom_bar(stat="identity",alpha=0.9) +
+  geom_errorbar(width=0.2,col="grey") +
+  geom_text(y=-0.02,col="grey50",fontface = "bold") +
+  scale_fill_manual(values=c(rgb(245+10,165+40,0,maxColorValue=255),rgb(245,165,0,maxColorValue=255),rgb(245-10,165-40,0,maxColorValue=255),rgb(245-30,165-120,0,maxColorValue=255))) +
+  xlab("Study arm & inoculation dose") +
+  ylab("Carriage proportion") +
+  guides(fill="none") +
+  theme_light() +
+  labs(title="PCV-13") +
+  ylim(c(0,yMax)) +
+  geom_vline(xintercept=3.5,col="darkgrey",lwd=1.5,lty=2) +
+  theme(axis.text.x = element_text(angle = 45, hjust=1))
+
+
+figCap<-paste(sep="","Log-binomial regression p-value for PCV-13 vaccination coefficient, p ",ifelse(pGlm>=0.001,paste(sep="","= ",format(nsmall=3,round(digits=3,pGlm))),"< 0.001.\n Carriers out of total participants are indicated below each bar."))
+grid.arrange(g1,g2,nrow=1,bottom=grid::textGrob(figCap, just="left"))
+```
+
+#### Sensitivity analysis: confounding by natural carriage
+
+Natural carriage may act as a confounder on experimental carriage. To investigate this we will first tabulate the proportions of experimental carriage among i) individuals who were natural carriers at visit C and those who were not carriers at that visit, ii) individuals who were natural carriers at any of visits C, E, F, G and those who did not become natural carriers at all. We will stratify these tabulations by randomisation arm.
+
+```{r mainObjAnalysisSensitivityNatCarrAnyVisit}
+datTabNatCarr<-data.frame(
+  vaccName=c(rep(levels(simDat$VaccName)[1],2),rep(levels(simDat$VaccName)[2],2)),
+  natCarr=rep(c("No natural carriage","Natural carriage"),2),
+  k=NA,
+  n=NA,
+  perc=NA
+)
+
+datTmp<-table(simDat$carriageNot6B,simDat$carriage,simDat$VaccName)
+
+for(j in 1:nrow(datTabNatCarr)){
+  datTabNatCarr$k[j]<-datTmp[ifelse(datTabNatCarr$natCarr[j]=="No natural carriage","0","1"),"1",datTabNatCarr$vaccName[j]]
+  datTabNatCarr$n[j]<-datTmp[ifelse(datTabNatCarr$natCarr[j]=="No natural carriage","0","1"),"0",datTabNatCarr$vaccName[j]]+datTmp[ifelse(datTabNatCarr$natCarr[j]=="no","0","1"),"1",datTabNatCarr$vaccName[j]]
+}
+
+datTabNatCarr$perc<-paste(sep="",format(nsmall=2,round(digits=2,100*datTabNatCarr$k/datTabNatCarr$n)),"%")
+
+datTabNatCarr %>%
+  dplyr::select(!vaccName) %>%
+  knitr::kable(col.names=c("","k","n","Percentage of 6B carriers"),caption="(DUMMY TABLE) Tabulated counts and percentages of experimental carriers stratified by natural carriage and randomisation arm. Natural carriage is defined here as being a carrier of a non-6B strain at any of visits C, E, F, G.") %>%
+  kableExtra::kable_styling(full_width = FALSE) %>%
+  kableExtra::pack_rows(group_label="Saline",1,2) %>%
+  kableExtra::pack_rows(group_label="PCV-13",3,4)
+```
+
+```{r mainObjAnalysisSensitivityNatCarrVisitC}
+datTmp<-table(simDat$carriageNot6BVisitC,simDat$carriage,simDat$VaccName)
+
+for(j in 1:nrow(datTabNatCarr)){
+  datTabNatCarr$k[j]<-datTmp[ifelse(datTabNatCarr$natCarr[j]=="No natural carriage","0","1"),"1",datTabNatCarr$vaccName[j]]
+  datTabNatCarr$n[j]<-datTmp[ifelse(datTabNatCarr$natCarr[j]=="No natural carriage","0","1"),"0",datTabNatCarr$vaccName[j]]+datTmp[ifelse(datTabNatCarr$natCarr[j]=="no","0","1"),"1",datTabNatCarr$vaccName[j]]
+}
+
+datTabNatCarr$perc<-paste(sep="",format(nsmall=2,round(digits=2,100*datTabNatCarr$k/datTabNatCarr$n)),"%")
+
+datTabNatCarr %>%
+  dplyr::select(!vaccName) %>%
+  knitr::kable(col.names=c("","k","n","Percentage of 6B carriers"),caption="(DUMMY TABLE) Tabulated counts and percentages of experimental carriers stratified by natural carriage and randomisation arm. Natural carriage is defined here as being a carrier of a non-6B strain at visit C.") %>%
+  kableExtra::kable_styling(full_width = FALSE) %>%
+  kableExtra::pack_rows(group_label="Saline",1,2) %>%
+  kableExtra::pack_rows(group_label="PCV-13",3,4)
+```
+
+We will not be powered to do a formal statistical comparison of experimental carriage proportion between these groups. However, if it appears that there may be substantially different experimental carriage proportions between groups, we will do a sensitivity analysis, fitting the same log-binomial model as for the primary analysis but including a term for natural carriage. Whether this natural carriage term is defined based on visit C carriage or carriage at any of visits C, E, F, G will be informed by which definition appears to have the largest difference in experimental carriage between groups.
+
+$$
+\log(\pi) = \log\left(E[Y|X_{20,000},X_{80,000},X_{PCV13},X_{nat\, carr}]\right) = \beta_0 + \beta_{20,000}\cdot X_{20,000} + \beta_{80,000}\cdot X_{80,000} + \beta_{PCV13}\cdot X_{PCV13} + \beta_{nat\,carr}\cdot X_{nat\,carr} 
+$$
+
+The results from this model will be summarised just as the primary model results are summarised.
+
+
+### Secondary analyses
+
+#### Descriptive analyses
+
+We will calculate carriage proportions per study arm at each follow-up visits (visits E, F, G).
+
+```{r mainObjAnalysisLinePlotStratAndAll, fig.cap="(DUMMY FIGURE) Serotype 6B carriage proportions per study arm and inoculation dose over time."}
+plotDatLine<-simDat %>%
+  dplyr::select(RID,dose,VaccName,carriageVisitE,carriageVisitF,carriageVisitG) %>%
+  pivot_longer(cols=c(carriageVisitE,carriageVisitF,carriageVisitG),names_to="visit",values_to="carriage") %>%
+  mutate(visit=gsub(visit,pattern="carriage",replacement="")) %>%
+  group_by(VaccName,visit,dose) %>%
+  summarise(
+    n=n(),
+    k=sum(carriage),
+    .groups="drop") %>%
+  mutate(
+    prop=k/n,
+    propLow=NA,
+    propUpp=NA
+  ) %>%
+  mutate(
+    visitNum=case_when(
+      visit=="VisitE"~2,
+      visit=="VisitF"~7,
+      visit=="VisitG"~14,
+      TRUE~NA_real_
+    ),
+    vaccInoDose=factor(paste(sep=" ",VaccName,format(dose,big.mark=",",trim=TRUE)),levels=c("Saline 20,000","Saline 80,000","Saline 160,000","PCV-13 20,000","PCV-13 80,000","PCV-13 160,000"))
+  )
+
+for(j in 1:nrow(plotDatLine)){
+  ci<-binom.test(x=plotDatLine$k[j],n=plotDatLine$n[j])$conf.int
+  plotDatLine$propLow[j]<-ci[1]
+  plotDatLine$propUpp[j]<-ci[2]
+  rm(ci)
+}
+
+plotDatLineAll<-simDat %>%
+  dplyr::select(RID,dose,VaccName,carriageVisitE,carriageVisitF,carriageVisitG) %>%
+  pivot_longer(cols=c(carriageVisitE,carriageVisitF,carriageVisitG),names_to="visit",values_to="carriage") %>%
+  mutate(visit=gsub(visit,pattern="carriage",replacement="")) %>%
+  group_by(VaccName,visit) %>%
+  summarise(
+    n=n(),
+    k=sum(carriage),
+    .groups="drop") %>%
+  mutate(
+    prop=k/n,
+    propLow=NA,
+    propUpp=NA
+  ) %>%
+  mutate(
+    visitNum=case_when(
+      visit=="VisitE"~2,
+      visit=="VisitF"~7,
+      visit=="VisitG"~14,
+      TRUE~NA_real_
+    ),
+    vaccInoDose=fct_recode(VaccName,"Saline (any dose)"="Saline","PCV-13 (any dose)"="PCV-13")
+  ) %>%
+  mutate(dose="All")
+
+for(j in 1:nrow(plotDatLineAll)){
+  ci<-binom.test(x=plotDatLineAll$k[j],n=plotDatLineAll$n[j])$conf.int
+  plotDatLineAll$propLow[j]<-ci[1]
+  plotDatLineAll$propUpp[j]<-ci[2]
+  rm(ci)
+}
+
+plotDatLine<-rbind(plotDatLine,plotDatLineAll)
+
+plotDatLine$dose<-fct_recode(factor(plotDatLine$dose,levels=c("20000","80000","160000","All")),"20,000 CFU"="20000","80,000 CFU"="80000","160,000 CFU"="160000","Any dose"="All")
+plotDatLine$vaccInoDose<-factor(plotDatLine$vaccInoDose,levels=c("Saline 20,000","Saline 80,000","Saline 160,000","Saline (any dose)","PCV-13 20,000","PCV-13 80,000","PCV-13 160,000","PCV-13 (any dose)"))
+    
+yMax<-max(plotDatLine$propUpp)
+                                 
+plotDatLine %>%
+  ggplot(mapping=aes(x=visitNum,y=prop,ymin=propLow,ymax=propUpp,col=VaccName)) +
+  geom_line(lty=2,lwd=1) +
+  geom_point(size=3) +
+  geom_errorbar(width=0.3,lwd=0.65) +
+  scale_color_manual(values=c("steelblue","orange"),name="Study arm") +
+  #scale_color_manual(values=c(blueCols,orangeCols),name="Vaccination / inoculation arm") +
+  xlab("Study visit (days since inoculation)") +
+  ylab("Carriage proportion") +
+  xlim(c(0,15)) +
+  ylim(c(0,yMax)) +
+  guides(fill="none") +
+  theme_light() +
+  labs(caption="Confidence intervals are exact binomial confidence intervals.\n") +
+  facet_wrap("dose")
+```
+
+
+#### Carriage density
+
+Unless stated otherwise, the density measurements used in these analyses are the culture-derived CFU measurements.
+
+Conditional on a participant being colonised with pneumococcus at a given visit, we will also compare carriage density between vaccination groups, inoculation dose and serotype (6B induced carriage or other serotype natural carriage). Specifically, we will use generalised estimating equations (GEE) with an exchangeable correlation structure to fit a linear regression model, with Gaussian errors and log link function, to the data from visits C, E, F, G, restricted to data only from participants that were carriers at that visit, with carriage density as response and vaccination status, inoculation dose and type of carriage as predictors.
+
+We will repeat this analysis, stratified by inoculation dose (note that any inoculation dose group with too few carriers for model fitting will skipped for this analysis).
+
+```{r mainObjAnalysisCarriageDensityGee}
+simDatLongCarriersOnly <- simDat %>%
+  dplyr::select(RID,VaccName,dose,densityVisitC,densityVisitE,densityVisitF,densityVisitG,carriageSerotypeVisitC,carriageSerotypeVisitE,carriageSerotypeVisitF,carriageSerotypeVisitG) %>%
+  pivot_longer(cols=-c(RID,VaccName,dose),names_to=c(".value","Visit"),names_pattern="(.+)Visit(.+)") %>%
+  mutate(
+    serotype6B=ifelse(carriageSerotype=="6B",1,0)
+  ) %>%
+  filter(!is.na(density))
+
+geeModCarrDens<-geeglm(density~VaccName+serotype6B+factor(dose),id=factor(RID),corstr="exchangeable",data=simDatLongCarriersOnly,family=stats::gaussian("log"))
+
+geeSum<-summary(geeModCarrDens)$coefficients
+colnames(geeSum)[colnames(geeSum)=="Pr(>|W|)"]<-"p.value"
+
+geeSum %>%
+  mutate(
+    parameter=case_when(
+      rownames(summary(geeModCarrDens)$coefficients)=="(Intercept)"~"(Intercept)",
+      rownames(summary(geeModCarrDens)$coefficients)=="VaccNamePCV-13"~"PCV-13 vaccine",
+      rownames(summary(geeModCarrDens)$coefficients)=="serotype6B"~"Serotype 6B",
+      rownames(summary(geeModCarrDens)$coefficients)=="factor(dose)80000"~"Dose: CFU 80,000",
+      rownames(summary(geeModCarrDens)$coefficients)=="factor(dose)160000"~"Dose: CFU 160,000"
+    )
+  ) %>%
+  as.data.frame() %>%
+  dplyr::select(parameter,Estimate,Std.err,Wald,p.value) %>%
+  mutate(p.value=ifelse(parameter!="(Intercept)" & p.value<0.05,cell_spec(format(nsmall=4,round(digits=4,p.value)),bold=T),cell_spec(format(nsmall=4,round(digits=4,p.value)),bold=F))) %>%
+  kable(row.names = FALSE,col.names=c("","Estimate","Std. error","Wald statistic","p-value"),escape=FALSE,caption="(DUMMY TABLE) Results from the GEE model fit to carriage density data. Model fitted only to data from participants who were carriers at the time of each given visit.") %>%
+  kable_styling(full_width = FALSE)
+```
+
+```{r mainObjAnalysisCarriageDensityGee20only}
+geeModCarrDens20<-geeglm(density~VaccName+serotype6B,id=factor(RID),corstr="exchangeable",data=simDatLongCarriersOnly %>% dplyr::filter(dose==20000),family=stats::gaussian("log"))
+
+geeSum20<-summary(geeModCarrDens20)$coefficients
+colnames(geeSum20)[colnames(geeSum20)=="Pr(>|W|)"]<-"p.value"
+
+geeSum20 %>%
+  mutate(
+    parameter=case_when(
+      rownames(summary(geeModCarrDens20)$coefficients)=="(Intercept)"~"(Intercept)",
+      rownames(summary(geeModCarrDens20)$coefficients)=="VaccNamePCV-13"~"PCV-13 vaccine",
+      rownames(summary(geeModCarrDens20)$coefficients)=="serotype6B"~"Serotype 6B"
+    )
+  ) %>%
+  as.data.frame() %>%
+  dplyr::select(parameter,Estimate,Std.err,Wald,p.value) %>%
+  mutate(p.value=ifelse(parameter!="(Intercept)" & p.value<0.05,cell_spec(format(nsmall=4,round(digits=4,p.value)),bold=T),cell_spec(format(nsmall=4,round(digits=4,p.value)),bold=F))) %>%
+  kable(row.names = FALSE,col.names=c("","Estimate","Std. error","Wald statistic","p-value"),escape=FALSE,caption="(DUMMY TABLE) Results from the GEE model fit to carriage density data for the CFU 20,000 inoculation group. Model fitted only to data from participants who were carriers at the time of each given visit.") %>%
+  kable_styling(full_width = FALSE)
+```
+
+```{r mainObjAnalysisCarriageDensityGee80only}
+geeModCarrDens80<-geeglm(density~VaccName+serotype6B,id=factor(RID),corstr="exchangeable",data=simDatLongCarriersOnly %>% dplyr::filter(dose==80000),family=stats::gaussian("log"))
+
+geeSum80<-summary(geeModCarrDens80)$coefficients
+colnames(geeSum80)[colnames(geeSum80)=="Pr(>|W|)"]<-"p.value"
+
+geeSum80 %>%
+  mutate(
+    parameter=case_when(
+      rownames(summary(geeModCarrDens80)$coefficients)=="(Intercept)"~"(Intercept)",
+      rownames(summary(geeModCarrDens80)$coefficients)=="VaccNamePCV-13"~"PCV-13 vaccine",
+      rownames(summary(geeModCarrDens80)$coefficients)=="serotype6B"~"Serotype 6B"
+    )
+  ) %>%
+  as.data.frame() %>%
+  dplyr::select(parameter,Estimate,Std.err,Wald,p.value) %>%
+  mutate(p.value=ifelse(parameter!="(Intercept)" & p.value<0.05,cell_spec(format(nsmall=4,round(digits=4,p.value)),bold=T),cell_spec(format(nsmall=4,round(digits=4,p.value)),bold=F))) %>%
+  kable(row.names = FALSE,col.names=c("","Estimate","Std. error","Wald statistic","p-value"),escape=FALSE,caption="(DUMMY TABLE) Results from the GEE model fit to carriage density data for the CFU 80,000 inoculation group. Model fitted only to data from participants who were carriers at the time of each given visit.") %>%
+  kable_styling(full_width = FALSE)
+```
+
+```{r mainObjAnalysisCarriageDensityGee160only}
+geeModCarrDens160<-geeglm(density~VaccName+serotype6B,id=factor(RID),corstr="exchangeable",data=simDatLongCarriersOnly %>% dplyr::filter(dose==160000),family=stats::gaussian("log"))
+
+geeSum160<-summary(geeModCarrDens160)$coefficients
+colnames(geeSum160)[colnames(geeSum160)=="Pr(>|W|)"]<-"p.value"
+
+geeSum160 %>%
+  mutate(
+    parameter=case_when(
+      rownames(summary(geeModCarrDens160)$coefficients)=="(Intercept)"~"(Intercept)",
+      rownames(summary(geeModCarrDens160)$coefficients)=="VaccNamePCV-13"~"PCV-13 vaccine",
+      rownames(summary(geeModCarrDens160)$coefficients)=="serotype6B"~"Serotype 6B"
+    )
+  ) %>%
+  as.data.frame() %>%
+  dplyr::select(parameter,Estimate,Std.err,Wald,p.value) %>%
+  mutate(p.value=ifelse(parameter!="(Intercept)" & p.value<0.05,cell_spec(format(nsmall=4,round(digits=4,p.value)),bold=T),cell_spec(format(nsmall=4,round(digits=4,p.value)),bold=F))) %>%
+  kable(row.names = FALSE,col.names=c("","Estimate","Std. error","Wald statistic","p-value"),escape=FALSE,caption="(DUMMY TABLE) Results from the GEE model fit to carriage density data for the CFU 160,000 inoculation group. Model fitted only to data from participants who were carriers at the time of each given visit.") %>%
+  kable_styling(full_width = FALSE)
+```
+
+For graphical representation we will show average carriage densities at each visit, stratified by serotype (6B or other) and inoculation dose group.
+
+```{r, eval=F}
+simDatLongCarriersOnly %>%
+  group_by(Visit,VaccName,dose,serotype6B) %>%
+  summarise(
+    densityMedian=median(density),
+    densityQ25=quantile(density,probs=0.25),
+    densityQ75=quantile(density,probs=0.75),
+    .groups="drop"
+  ) %>%
+  complete(Visit,VaccName,dose,serotype6B) %>%
+  mutate(
+    serotype6B=case_when(
+      serotype6B==0~"Not 6B",
+      serotype6B==1~"6B"
+    )
+  ) %>%
+  ggplot(mapping=aes(x=Visit,y=densityMedian,ymin=densityQ25,ymax=densityQ75,fill=VaccName)) +
+  geom_bar(stat="identity",position=position_dodge()) +
+  geom_errorbar(width=0.5,position=position_dodge(width=0.9),col="darkgrey",lwd=0.5) +
+  theme_light() +
+  ylab("Carriage density") +
+  facet_wrap(~serotype6B+factor(paste(sep=" ","CFU",format(dose,big.mark=",",trim=TRUE)),levels=c("CFU 20,000","CFU 80,000","CFU 160,000"))) +
+  scale_fill_manual(values=c("steelblue","orange")) +
+  scale_y_continuous(trans="log10")
+```
+
+```{r mainObjAnalysisDensityMedianIqr, fig.cap="(DUMMY FIGURE) Median carriage density per serotype and inoculation group."}
+simDatLongCarriersOnly %>%
+  ggplot(mapping=aes(x=paste(sep=" ",Visit,VaccName),y=density)) +
+  geom_boxplot(mapping=aes(fill=VaccName),col="darkgrey",alpha=0.25) +
+  geom_jitter(mapping=aes(col=VaccName,group=VaccName),height=0,width=0.1,alpha=0.75) +
+  theme_light() +
+  ylab("Carriage density") +
+  xlab("Visit") + 
+  facet_wrap(~serotype6B+factor(paste(sep=" ","CFU",format(dose,big.mark=",",trim=TRUE)),levels=c("CFU 20,000","CFU 80,000","CFU 160,000"))) +
+  scale_color_manual(values=c("steelblue","orange"),name="Study arm") +
+  scale_fill_manual(values=rep("white",2),name="Study arm") +
+  scale_y_continuous(trans="log10") +
+  scale_x_discrete(labels=c("Visit","C","Visit","E","Visit","F","Visit","G"))
+```
+
+#### Carriage duration
+
+Given that there are only a small number of fixed visits where carriage is assessed, a formal analysis of duration data will not be performed (both start and end times of carriage events are all either left, interval or right censored). However we will provide a visual summary of the duration data, by carriage type (6B or other serotype), study arm and visit of first recorded carriage. Specifically we will show mean carriage durations as well as the standard error for this mean duration.
+
+Given the censored nature of carriage start and end times, we need to make a few pragmatic decisions for the visual summaries. If carriage is only recorded at the last visit (visit G), then no duration can be inferred. Where carriage ceases between any 2 visits, the duration is computed as if it occurred at the mid-point of the interval given by the two visits. Where carriage is still ongoing at the last visit (visit G), carriage duration is recorded as if it lasted until visit G. The start time of carriage is taken as the visit at which carriage was first detected.
+
+```{r mainObjAnalysisCarrDur, fig.cap="(DUMMY FIGURE) Mean carriage duration by serotype, study arm and visit of first carriage."}
+durationDat6B<-simDat %>%
+  filter(carriage==1 & visitFirstCarriage6B!="G") %>%
+  group_by(VaccName,visitFirstCarriage6B) %>%
+  summarise(
+    dur6BMean=mean(durationFirstCarriage6B,na.rm=T),
+    dur6BSE=sd(durationFirstCarriage6B,na.rm=T)/sum(!is.na(durationFirstCarriage6B)),
+    .groups="drop"
+  ) %>%
+  tidyr::complete(VaccName,visitFirstCarriage6B)
+
+durationDatNot6B<-simDat %>%
+  filter(carriageNot6B==1 & visitFirstCarriageNot6B!="G") %>%
+  group_by(VaccName,visitFirstCarriageNot6B) %>%
+  summarise(
+    durNot6BMean=mean(durationFirstCarriageNot6B,na.rm=T),
+    durNot6BSE=sd(durationFirstCarriageNot6B,na.rm=T)/sum(!is.na(durationFirstCarriageNot6B)),
+    .groups="drop"
+  ) %>%
+  tidyr::complete(VaccName,visitFirstCarriageNot6B)
+
+durationDat<-data.frame(
+  VaccName=c(durationDat6B$VaccName,durationDatNot6B$VaccName),
+  visitFirstCarriage=c(durationDat6B$visitFirstCarriage6B,durationDatNot6B$visitFirstCarriageNot6B),
+  durMean=c(durationDat6B$dur6BMean,durationDatNot6B$durNot6BMean),
+  durSE=c(durationDat6B$dur6BSE,durationDatNot6B$durNot6BSE),
+  type=c(rep("6B carriage",nrow(durationDat6B)),rep("Non-6B carriage",nrow(durationDatNot6B)))
+)
+
+durationDat %>%
+  ggplot(mapping=aes(x=factor(visitFirstCarriage,levels=sort(decreasing=T,unique(visitFirstCarriage))),y=durMean,ymin=durMean-durSE,ymax=durMean+durSE,fill=VaccName)) +
+  geom_bar(stat="identity",position=position_dodge()) +
+  geom_errorbar(width=0.5,position=position_dodge(width=0.9),col="darkgrey",lwd=0.5) +
+  scale_fill_manual(values=c("steelblue","orange")) +
+  coord_flip() +
+  xlab("Visit of first carriage") +
+  ylab("Mean carriage duration (days)") +
+  theme_light() +
+  labs(caption="Error bars indicate the standard error of the sample mean of carriage duration.\nAbsence of error bars means a single observation.\nAbsence of colour bar means no recorded first carriage at that visit for that vaccination group.") +
+  theme(axis.text.y=element_text(size=20)) +
+  facet_wrap("type",nrow = 2)
+```
+
+#### Total carriage density during study
+
+We will define the total experimental carriage density during the study as the area under the time-density curve (tdAUC) for 6B colonisation. We will use the trapezoidal rule to calculate the tdAUC using the density measurements at visits E, F, G and assuming a visit C density of 0 CFU/ml. Likewise, density at any visit where no carriage was detected is taken to be 0 CFU/ml.
+
+To calculate tdAUC, we use the actual density measurements, but for statistical tests and models we will use $log_{10}(\mbox{tdAUC})$ as the tdAUC distribution is expected to be severely skewed (we restrict comparisons to carriers, so all tdAUCs used in analyses will be positive).
+
+As per the main analysis of binary carriage status, we will compare $log_{10}(\mbox{tdAUC})$ measurements for experimental carriers using a generalised linear model between PCV-13 and saline randomised participants while accounting for inoculation dose.
+We will also compare the tdAUC for experimental carriers between PCV-13 vaccinated and saline randomised participants using the two-sample Mann-Whitney-Wilcoxon test, stratified by inoculation dose (for doses where there are no carriers in one of the 2 groups, this analysis will be skipped.).
+
+We will summarise these results in 2 types of graph: 1) box and jitter plots showing the carriage densities in the different study arms, stratified by inoculation dose and 2) line graphs showing the individual and average colonisation density profiles over time in the two groups, again stratified by inoculation dose.
+
+```{r secObjtdAUC}
+options(scipen=99)
+
+simDat<-simDat %>%
+  dplyr::mutate(
+    density6BVisitE=case_when(carriageVisitE==1~densityVisitE,TRUE~0),
+    density6BVisitF=case_when(carriageVisitF==1~densityVisitF,TRUE~0),
+    density6BVisitG=case_when(carriageVisitG==1~densityVisitG,TRUE~0),
+    densityNot6BVisitC=case_when(carriageNot6BVisitC==1~densityVisitC,TRUE~0),
+    densityNot6BVisitE=case_when(carriageNot6BVisitE==1~densityVisitE,TRUE~0),
+    densityNot6BVisitF=case_when(carriageNot6BVisitF==1~densityVisitF,TRUE~0),
+    densityNot6BVisitG=case_when(carriageNot6BVisitG==1~densityVisitG,TRUE~0)
+  )
+
+tdAUCVect<-function(dateVec,densVec){
+  n<-length(dateVec)
+  if(length(densVec)!=n){stop("dateVec and densVec need to be of the same length.")}
+  
+  densVec[is.na(densVec)]<-0
+  #densVec<-log10(densVec+1)
+  
+  midPoints<-(densVec[1:(n-1)]+densVec[2:n])/2
+  widths<-as.numeric(ymd(dateVec[2:n])-ymd(dateVec[1:(n-1)]))
+  
+  auc<-sum(midPoints*widths)
+  return(auc)
+}
+
+tdAUCMat<-function(dateCols,densCols){
+  n<-ncol(dateCols)
+  if(ncol(densCols)!=n){stop("dateCols and densCols need to have the same number of columns.")}
+  
+  densCols[is.na(densCols)]<-0
+  #densCols<-log10(densCols+1)
+  
+  for(j in 1:n){dateCols[,j]<-ymd(dateCols[,j])}
+  
+  midPoints<-(densCols[,1:(n-1)]+densCols[,2:n])/2
+  widths<-sapply(FUN=as.numeric,X=dateCols[,2:n]-dateCols[,1:(n-1)])
+  
+  auc<-rowSums(midPoints*widths)
+  return(auc)
+}
+
+simDat<-simDat %>%
+  dplyr::mutate(tdAUC=tdAUCMat(dateCols=simDat %>% dplyr::select(visitC_date,visitE_date,visitF_date,visitG_date),densCols=cbind(0,simDat %>% dplyr::select(density6BVisitE,density6BVisitF,density6BVisitG))))
+
+tdAUCmod<-glm(log10(tdAUC)~VaccName+doseGroup,data=simDat %>% filter(carriage==1))
+
+tdAUCwilcox20<-try(silent=TRUE,wilcox.test(simDat$tdAUC[simDat$doseGroup=="CFU 20000" & simDat$carriage==1 & simDat$VaccName=="PCV-13"],simDat$tdAUC[simDat$doseGroup=="CFU 20000" & simDat$carriage==1 & simDat$VaccName=="Saline"]))
+tdAUCwilcox80<-try(silent=TRUE,wilcox.test(simDat$tdAUC[simDat$doseGroup=="CFU 80000" & simDat$carriage==1 & simDat$VaccName=="PCV-13"],simDat$tdAUC[simDat$doseGroup=="CFU 80000" & simDat$carriage==1 & simDat$VaccName=="Saline"]))
+tdAUCwilcox160<-try(silent=TRUE,wilcox.test(simDat$tdAUC[simDat$doseGroup=="CFU 160000" & simDat$carriage==1 & simDat$VaccName=="PCV-13"],simDat$tdAUC[simDat$doseGroup=="CFU 160000" & simDat$carriage==1 & simDat$VaccName=="Saline"]))
+
+simDat$doseGroup<-factor(as.character(simDat$doseGroup),levels=c("CFU 20000","CFU 80000","CFU 160000"))
+
+wilcoxResDf<-simDat %>%
+  dplyr::select(carriage,doseGroup,VaccName,tdAUC) %>%
+  dplyr::filter(carriage==1) %>%
+  dplyr::group_by(doseGroup,VaccName) %>%
+  dplyr::summarise(
+    median=format(nsmall=2,round(digits=2,(median(tdAUC)))),
+    IQR=paste(sep="","(",format(nsmall=2,round(digits=2,quantile(tdAUC,prob=0.25))),",",format(nsmall=2,round(digits=2,quantile(tdAUC,prob=0.75))),")"),
+    .groups="drop"
+  )
+  wilcoxResDf<-tidyr::complete(data=wilcoxResDf,doseGroup,VaccName,fill=list(median="-",IQR="-")) %>%
+    tidyr::pivot_wider(id_cols=doseGroup,names_from=VaccName,values_from=c(median,IQR)) %>%
+    dplyr::mutate(p.value=NA)
+  
+  for(j in 1:nrow(wilcoxResDf)){
+    if(
+      wilcoxResDf$doseGroup[j]=="CFU 20000" & class(tdAUCwilcox20)!="try-error"){wilcoxResDf$p.value[j]<-format(nsmall=4,round(digits=4,tdAUCwilcox20$p.value))
+    }else if(
+      wilcoxResDf$doseGroup[j]=="CFU 80000" & class(tdAUCwilcox80)!="try-error"){wilcoxResDf$p.value[j]<-format(nsmall=4,round(digits=4,tdAUCwilcox80$p.value))
+    }else if(
+      wilcoxResDf$doseGroup[j]=="CFU 160000" & class(tdAUCwilcox160)!="try-error"){wilcoxResDf$p.value[j]<-format(nsmall=4,round(digits=4,tdAUCwilcox160$p.value))
+    }else{
+      wilcoxResDf$p.value[j]<-"-"
+    }
+    if(wilcoxResDf$p.value[j]=="0.0000"){wilcoxResDf$p.value[j]<-"<0.0001"}
+  }
+ 
+wilcoxResDf<-wilcoxResDf[,c("doseGroup","median_PCV-13","IQR_PCV-13","median_Saline","IQR_Saline","p.value")]
+   
+wilcoxResDf %>%
+  knitr::kable(col.names=c("Dose","Median","IQR","Median","IQR","p.value"),caption="(DUMMY TABLE) Mann-Whitney-Wilcoxon test result for comparing tdAUC between study arms by inoculation group.") %>%
+  kableExtra::kable_styling(full_width=FALSE) %>%
+  kableExtra::add_header_above(c(" "=1,"PCV-13"=2,"Saline"=2," "=1))
+```
+
+```{r secObjtdAUCBoxJitterPlots, fig.cap="(DUMMY FIGURE) Total carriage density (tdAUC) box and jitter plots by study arm and inoculation dose."}
+simDat %>%
+  filter(carriage==1) %>%
+  ggplot(mapping=aes(x=VaccName,y=tdAUC,col=VaccName)) +
+  geom_boxplot(alpha=0.5) +
+  geom_jitter(height=0,width=0.25,alpha=0.5) +
+  theme_light() +
+  scale_color_manual(values=c("steelblue","orange")) +
+  guides(color="none") +
+  facet_wrap(~doseGroup,nrow=1) +
+  xlab("") +
+  ylab("total density AUC (CFU days/ml)") +
+  scale_y_continuous(trans = "log10") +
+  labs(title=paste(sep="","Conditional on carriage and on inoculation dose, the effect of PCV-13 vaccination on log110(tdAUC) is ",round(digits=2,summary(tdAUCmod)$coefficients["VaccNamePCV-13","Estimate"])," (p=",round(digits=4,summary(tdAUCmod)$coefficients["VaccNamePCV-13","Pr(>|t|)"]),")."))
+```
+
+```{r secObjdensityTimeProfiles, fig.cap="(DUMMY FIGURE) Density time profiles by study arm and inoculation dose."}
+simDatDensLong<-simDat %>%
+  dplyr::mutate(density6BVisitC=0) %>%
+  dplyr::select(c(PID,RID,VaccName,doseGroup,carriage,visitC_date,visitE_date,visitF_date,visitG_date,density6BVisitC,density6BVisitE,density6BVisitF,density6BVisitG)) %>%
+  dplyr::mutate(
+    timeSinceVisitC_VisitC=0,
+    timeSinceVisitC_VisitE=as.numeric(ymd(visitE_date)-ymd(visitC_date)),
+    timeSinceVisitC_VisitF=as.numeric(ymd(visitF_date)-ymd(visitC_date)),
+    timeSinceVisitC_VisitG=as.numeric(ymd(visitG_date)-ymd(visitC_date))
+    ) %>%
+  dplyr::select(!starts_with("visit"))
+
+colnames(simDatDensLong)<-gsub(pattern="density6B",replacement="density6B_",colnames(simDatDensLong))
+
+simDatDensLong<-simDatDensLong %>%
+  tidyr::pivot_longer(cols=contains("Visit"),names_pattern="(.*)_Visit(.)",names_to=c("measurement","visit"),values_to="value") %>%
+  tidyr::pivot_wider(id_cols=c(PID,RID,VaccName,doseGroup,carriage,visit),names_from="measurement",values_from="value")
+
+simDatDensLongAvg<-simDatDensLong %>%
+  filter(carriage==1) %>%
+  dplyr::group_by(VaccName,doseGroup,timeSinceVisitC) %>%
+  dplyr::summarise(
+    density6B=median(density6B)
+  )
+
+simDatDensLong %>%
+  ggplot(mapping=aes(x=timeSinceVisitC,y=density6B,lty=PID,col=VaccName)) +
+  geom_line(alpha=0.65) +
+  theme_light() +
+  geom_line(data=simDatDensLongAvg,mapping=aes(x=timeSinceVisitC,y=density6B,col=VaccName),lwd=1.75,lty=1) +
+  xlab("Days since inoculation visit.") +
+  ylab("Carriage density (CFU/ml)") +
+  scale_y_continuous(trans = "log10") +
+  scale_color_manual(values=c("steelblue","orange")) +
+  scale_linetype_manual(values=sample(2:6,replace=TRUE,size=length(unique(simDatDensLong$PID)))) +
+  guides(linetype="none",color="none") +
+  facet_wrap(~VaccName+doseGroup,nrow=2) +
+  labs(title="Density time profiles by study arm and inoculation dose.",caption="(DUMMY TABLE) Dashed and dotted lines show individual profiles.\nThe thick solid lines show the median profiles among experimental carriers in each group.")
+```
+
+
+#### Effect of PCV-13 vaccine on natural, vaccine-type carriage
+
+Given that the PCV-13 vaccine is meant to protect against 13 serotypes of *S. pneumoniae*, we will investigate whether we observe such a protective effect against vaccine-type serotypes.
+
+However, as we are likely to observe much lower rates of natural carriage than experimental carriage we are almost surely not powered for this analysis and hence will primarily focus largely on a descriptive analysis, summarising vaccine-type carriage events in a 2x2 table and performing a simple Fisher exact test.
+
+We will however attempt to fit the same model as for the primary analysis, just with natural, vaccine-type carriage as endpoint. If this model converges, we will report the results, but will be careful with over-interpreting the result given the expected low power for this analysis.
+
+```{r secObjNatCarr2x2}
+simDat<-simDat %>%
+  dplyr::mutate(
+    carriageNot6BVaccineType=case_when(
+      is.na(carriageSerotypeNot6B)~0,
+      !is.na(carriageSerotypeNot6B) & carriageSerotypeNot6B=="NVT"~0,
+      TRUE~1
+    ))
+
+tabVT<-table(simDat$VaccName,simDat$carriageNot6BVaccineType)
+
+pFishVT<-fisher.test(tabVT)$p.value
+pFishVT<-ifelse(pFishVT>=0.001,paste(sep=""," = ",format(nsmall=3,round(digits=3,pFishVT)))," < 0.001")
+
+tabVT %>%
+  kable(caption=paste(sep="","(DUMMY TABLE) Number of participants colonised with vaccine-type S. Pneumoniae by study arm. Exact Fisher test p-value ",pFishVT,"."),col.names=c("Not colonised","Colonised"),row.names=T) %>%
+  kable_styling(full_width = F)
+```
+
+```{r secObjNatCarrMod}
+simDat$doseGroup<-factor(as.character(simDat$doseGroup),levels=c("CFU 160000","CFU 80000","CFU 20000"))
+
+modNot6B<-logbin::logbin(carriageNot6B~VaccName+doseGroup,data=simDat)
+
+pGlm<-summary(modNot6B)$coefficients["VaccNamePCV-13","Pr(>|z|)"]
+rrGlmVacc<-exp(c(summary(modNot6B)$coefficients["VaccNamePCV-13","Estimate"],confint(modNot6B)["VaccNamePCV-13",]))
+
+modRes<-summary(modNot6B)$coefficients %>%
+  as.data.frame() %>%
+  mutate(
+    parameter=case_when(
+      rownames(summary(modNot6B)$coefficients)=="(Intercept)"~"(Intercept)",
+      rownames(summary(modNot6B)$coefficients)=="VaccNamePCV-13"~"PCV-13 vaccine",
+      rownames(summary(modNot6B)$coefficients)=="doseGroupCFU 20000"~"Dose: CFU 20,000",
+      rownames(summary(modNot6B)$coefficients)=="doseGroupCFU 80000"~"Dose: CFU 80,000"
+    )
+  )
+
+colnames(modRes)<-c("Estimate","Std.err","z.value","p.value","parameter")
+
+modRes %>%
+  dplyr::select(parameter,Estimate,Std.err,z.value,p.value) %>%
+  mutate(p.value=ifelse(parameter!="(Intercept)" & p.value<0.05,cell_spec(format(nsmall=3,round(digits=3,p.value)),bold=T),cell_spec(format(nsmall=3,round(digits=3,p.value)),bold=F))) %>%
+  kable(row.names = FALSE,col.names=c("","Estimate","Std. error","Z statistic","p-value"),escape=FALSE,caption=paste(sep="","(DUMMY TABLE) Summary of the log-binomial regression model fit for natural carriage. The baseline natural carriage risk for a saline-randomised participant inoculated at the CFU 160,000 dose is ",format(digits=1,round(digits=1,100*exp(modRes["(Intercept)","Estimate"]))),"%, 95% CI (",paste(collapse="%, ",format(nsmall=1,round(digits=1,100*exp(c(modRes["(Intercept)","Estimate"]-qnorm(0.975)*modRes["(Intercept)","Std.err"],modRes["(Intercept)","Estimate"]+qnorm(0.975)*modRes["(Intercept)","Std.err"]))))),"%). There is ",ifelse(pGlm<0.05,"a","no")," statistically significant effect of PCV-13 vaccine on the probability of natural carriage (RR ",format(nsmall=2,round(digits=2,rrGlmVacc[1])),", 95% CI (",paste(collapse=", ",format(nsmall=2,round(digits=2,rrGlmVacc[2:3]))),"), p ",ifelse(pGlm>=0.001,paste(sep="","= ",format(nsmall=3,round(digits=3,pGlm))),"< 0.001"),")."),digits=3) %>%
+  kable_styling(full_width = FALSE)
+```
+
+#### Sub-group analyses
+
+We will repeat the above analyses stratified by sex.
+
+#### Inoculum densities
+
+We will compute the average before and after inoculation densities of the inocula that were prepared, summarise these by their medians, inter-quartile ranges and ranges per target dose and visualise them on boxplots.
+
+```{r inoculaDensitiesPrePostAvg}
+inoDatLong<-inoDat %>%
+  tidyr::pivot_longer(cols=contains("doseConc"),names_to="type",values_to="doseConc") %>%
+  dplyr::mutate(type=gsub(pattern="doseConc",replacement="",type)) %>%
+  dplyr::mutate(
+    doseGroup=factor(levels=c("CFU 20,000","CFU 80,000","CFU 160,000"),case_when(
+      dose==20000~"CFU 20,000",
+      dose==80000~"CFU 80,000",
+      dose==160000~"CFU 160,000",
+      TRUE~NA_character_
+    ))
+  ) %>%
+  dplyr::mutate(
+    type=factor(levels=c("Before","After","Average"),case_when(
+      type=="Pre"~"Before",
+      type=="Post"~"After",
+      type=="Avg"~"Average"
+    ))
+  )
+
+inoDatSumPre<-inoDatLong %>%
+  dplyr::filter(type=="Before") %>%
+  dplyr::group_by(doseGroup) %>%
+  dplyr::summarise(
+    median=format(nsmall=0,big.mark=",",trim=TRUE,round(median(doseConc))),
+    iqr=paste(sep="","(",paste(collapse=", ",format(nsmall=0,big.mark=",",trim=TRUE,round(quantile(doseConc,prob=c(0.25,0.75))))),")"),
+    range=paste(sep="","(",paste(collapse=", ",format(nsmall=0,big.mark=",",trim=TRUE,round(quantile(doseConc,prob=c(0,1))))),")"),
+  )
+
+inoDatSumPost<-inoDatLong %>%
+  dplyr::filter(type=="After") %>%
+  dplyr::group_by(doseGroup) %>%
+  dplyr::summarise(
+    median=format(nsmall=0,big.mark=",",trim=TRUE,round(median(doseConc))),
+    iqr=paste(sep="","(",paste(collapse=", ",format(nsmall=0,big.mark=",",trim=TRUE,round(quantile(doseConc,prob=c(0.25,0.75))))),")"),
+    range=paste(sep="","(",paste(collapse=", ",format(nsmall=0,big.mark=",",trim=TRUE,round(quantile(doseConc,prob=c(0,1))))),")"),
+  )
+
+inoDatSumAvg<-inoDatLong %>%
+  dplyr::filter(type=="Average") %>%
+  dplyr::group_by(doseGroup) %>%
+  dplyr::summarise(
+    median=format(nsmall=0,big.mark=",",trim=TRUE,round(median(doseConc))),
+    iqr=paste(sep="","(",paste(collapse=", ",format(nsmall=0,big.mark=",",trim=TRUE,round(quantile(doseConc,prob=c(0.25,0.75))))),")"),
+    range=paste(sep="","(",paste(collapse=", ",format(nsmall=0,big.mark=",",trim=TRUE,round(quantile(doseConc,prob=c(0,1))))),")"),
+  )
+
+rbind(inoDatSumPre,inoDatSumPost,inoDatSumAvg) %>%
+  kable(row.names=FALSE,col.names=c("","Median","IQR","Range"),caption="(DUMMY TABLE) Medians, inter-quartile ranges (IQRs) and ranges for the inoculum dose measurements before and after inoculation. Also shown are the summaries for the average measurements.") %>%
+  kable_styling(full_width = FALSE) %>%
+  pack_rows(group_label="Before inoculation",1,3) %>%
+  pack_rows(group_label="After inoculation",4,6) %>%
+  pack_rows(group_label="Average",7,9)
+```
+
+```{r inoculaDensitiesPrePostAvgPlot, fig.cap="(DUMMY FIGURE) Boxplot, by target dose, of before and after inoculation dose measurements of the study inocula as well as the average."}
+inoDatLong %>%
+  ggplot(mapping=aes(x=type,y=doseConc,col=doseGroup)) +
+  geom_boxplot(fill="white",alpha=0.5) +
+  geom_jitter(height=0,alpha=0.5) +
+  geom_hline(mapping=aes(yintercept=ifelse(dose==20000,0.5*20000,NA)),col=blueCols[2],lty=2) +
+  geom_hline(mapping=aes(yintercept=ifelse(dose==20000,2*20000,NA)),col=blueCols[2],lty=2) +
+  geom_hline(mapping=aes(yintercept=ifelse(dose==80000,0.5*80000,NA)),col=blueCols[3],lty=2) +
+  geom_hline(mapping=aes(yintercept=ifelse(dose==80000,2*80000,NA)),col=blueCols[3],lty=2) +
+  geom_hline(mapping=aes(yintercept=ifelse(dose==160000,0.5*160000,NA)),col=blueCols[4],lty=2) +
+  geom_hline(mapping=aes(yintercept=ifelse(dose==160000,2*160000,NA)),col=blueCols[4],lty=2) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  scale_color_manual(values=blueCols[2:4]) +
+  xlab("Measurement type") +
+  ylab("Dose (CFU)") +
+  ylim(c(0,1.5*160000)) +
+  labs(caption="Dashed lines indicate tolerable ranges.") +
+  facet_wrap(~doseGroup)
+```
+
+Should we observe large amounts of variability in the dose measurements, we will repeat the above descriptive analyses stratified by study arm to check that no inadvertent imbalances in inoculation dose occurred across arms. Given that block randomisation is used together with the fact that participants inoculated on the same day are being inoculated with the same inoculum, this is extremely unlikely and hence such a stratified descriptive analysis not planned by default.
+
+#### Comparison of culture and lytA/6B derived density measurements
+
+We have stated that the culture derived density measurements are used as default in the above listed main analysis investigations. However, we also measure densities derived from lytA/6B multiplex qPCR. We will compare the two sets of density measurements.
+
+Specifically, we will
+
+* Produce scatter plots of culture (x-axis) and lytA/6B multiplex qPCR (y-axis) measurements, stratified by study arm, dose group and 6B and not-6B serotypes.
+* Compute differences in log~10~(density+1) measurements between culture and lytA/6B multiples qPCR results and summarise these as histograms, stratified by 6B and not-6B serotypes.
+
+```{r secObjDensityComparisonScatter, fig.cap="(DUMMY FIGURE) Scatter plots of culture and lytA/6B density measurements by study arm, inoculation dose and serotype.", fig.height=12}
+simDat$doseGroup<-factor(as.character(simDat$doseGroup),levels=c("CFU 20000","CFU 80000","CFU 160000"))
+
+dens6B<-simDat %>%
+  dplyr::select(c(PID,doseGroup,VaccName,density6BVisitE,density6BVisitF,density6BVisitG)) %>%
+  tidyr::pivot_longer(cols=c(density6BVisitE,density6BVisitF,density6BVisitG),names_to="visit",values_to="density6B") %>%
+  dplyr::mutate(visit=gsub(visit,pattern="density6B",replacement=""))
+      
+densNot6B<-simDat %>%
+  dplyr::select(c(PID,doseGroup,VaccName,densityNot6BVisitC,densityNot6BVisitE,densityNot6BVisitF,densityNot6BVisitG)) %>%
+  tidyr::pivot_longer(cols=c(densityNot6BVisitC,densityNot6BVisitE,densityNot6BVisitF,densityNot6BVisitG),names_to="visit",values_to="densityNot6B") %>%
+  dplyr::mutate(visit=gsub(visit,pattern="densityNot6B",replacement=""))
+
+densDatLong<-densNot6B %>%
+  dplyr::mutate(density6B=dens6B$density6B[match(paste(sep="_",PID,visit),paste(sep="_",dens6B$PID,dens6B$visit))]) %>%
+  tidyr::pivot_longer(cols=c(densityNot6B,density6B),values_to="density",names_to="serotype") %>%
+  dplyr::mutate(serotype=gsub(serotype,pattern="density",replacement=""))
+
+densDatLong<-densDatLong %>%
+  dplyr::mutate(density_lytA=rnorm(nrow(densDatLong),mean=density,sd=density/10)) %>%
+  dplyr::mutate(density_lytA=ifelse(density_lytA<0,0,density_lytA)) %>%
+  dplyr::mutate(density_log10Diff=log10(density+1)-log10(density_lytA+1))
+
+g1<-densDatLong %>%
+  dplyr::filter(serotype=="6B") %>%
+  ggplot(mapping=aes(x=log10(density+1),y=log10(density_lytA+1),col=VaccName)) +
+  geom_point() +
+  scale_color_manual(values=c("steelblue","orange")) +
+  guides(color="none") +
+  theme_light() +
+  xlab("log10(culture density [CFU/ul] + 1)") +
+  ylab("log10(lytA/6B density [copies/ml] + 1)") +
+  facet_wrap(~doseGroup+VaccName,nrow=3) +
+  labs(title="6B")
+
+g2<-densDatLong %>%
+  dplyr::filter(serotype=="Not6B") %>%
+  ggplot(mapping=aes(x=log10(density+1),y=log10(density_lytA+1),col=VaccName)) +
+  geom_point() +
+  scale_color_manual(values=c("steelblue","orange")) +
+  guides(color="none") +
+  theme_light() +
+  xlab("log10(culture density [CFU/ul]  + 1)") +
+  ylab("log10(lytA/6B density [copies/ml] + 1)") +
+  facet_wrap(~VaccName,nrow=1) +
+  labs(title="Other serotypes")
+
+grid.arrange(g1,g2,nrow=2,heights=c(3,1.3))
+```
+
+```{r secObjDensityComparisonHist, fig.cap="(DUMMY FIGURE) Histogram of differences in log10(density + 1) measurements derived from culture and lytA/6B.", fig.height=12}
+g1<-densDatLong %>%
+  dplyr::filter(serotype=="6B") %>%
+  dplyr::filter(density>0 | density_lytA>0) %>%
+  ggplot(mapping=aes(x=density_log10Diff,fill=VaccName)) +
+  geom_histogram(col="white",bins=20) +
+  scale_fill_manual(values=c("steelblue","orange")) +
+  guides(fill="none") +
+  theme_light() +
+  xlab("log10(culture density [CFU/ul] + 1) - log10(lytA/6B density [copies/ml] + 1)") +
+  ylab("") +
+  facet_wrap(~doseGroup+VaccName,nrow=3) +
+  labs(title="6B")
+
+g2<-densDatLong %>%
+  dplyr::filter(serotype=="Not6B") %>%
+  dplyr::filter(density>0 | density_lytA>0) %>%
+  ggplot(mapping=aes(x=density_log10Diff,fill=VaccName)) +
+  geom_histogram(col="white",bins=20) +
+  scale_fill_manual(values=c("steelblue","orange")) +
+  guides(fill="none") +
+  theme_light() +
+  xlab("log10(culture density [CFU/ul]+ 1) - log10(lytA/6B density [copies/ml] + 1)") +
+  ylab("") +
+  facet_wrap(~VaccName,nrow=1) +
+  labs(title="Other serotypes")
+
+grid.arrange(g1,g2,nrow=2,heights=c(3,1.3))
+```
+
+Finally, as a sensitivity analysis, we will repeat the above listed main analyses (investigations of differences in carriage density by inoculation group, study arms and serotype) using the lytA/6B density measurements.
+
+
+### Exploratory analyses
+
+#### Dose-response curve and effective dose ED50
+
+Using data from the saline arm only, we will use the data from the different inoculation dose groups to estimate a dose-response curve. Specifically, we will fit a logistic regression model with log dose as the predictor variable (equivalent to a 2-parameter log-logistic dose-response model [@ritzEtal2020, @ritzEtal2015]). For this we will use the actual dose of inoculum that was administered, defined as the average of the pre- and post-administration dose measurements, rather than the specified target dose.
+
+Using the same notation as above, writing $Y$ for the carriage status (i.e. the response) and $X_{conc}$ for the actual inoculation dose measured in CFU, we fit the following model:
+
+$$
+\mbox{logit}\left(E[Y|X_{conc}]\right) = \beta_0 + \beta_1\cdot\log(X_{conc})
+$$
+
+where $Y|X_{conc}$ follows a Bernoulli distribution with parameter $p=E[Y|X_{conc}]$.
+
+
+From this model we will derive an estimate of the effective dose $ED50$, the dose at which on average 50% of participants become colonised with serotype 6B:
+
+$$
+ED50 = \exp\left(-\beta_0/\beta_1\right)
+$$
+
+To derive a 95% confidence intervals for $ED50$, we will use bootstrap resampling of the data with B=10,000 samples. For each bootstrap sample, we will compute an estimate of $ED50$, thus building up an empirical distribution of $ED50$ values. We will use the percentile method to summarise that empiral distribution as a 95% confidence interval.
+
+```{r exploAnalysisDrc}
+### fit DRC model
+#modDrc<-drc::drm(carriage~log(doseConcAvg),data=simDat %>% dplyr::filter(VaccName=="Saline"),fct=LL.2(),type="binomial")
+modDrcGlm<-  glm(carriage~log(doseConcAvg),data=simDat %>% dplyr::filter(VaccName=="Saline"),family=binomial)
+
+edFun<-function(modGlm,prob=0.5){
+  cfs<-coef(summary(modGlm))[,"Estimate"]
+  ed<-exp((log(prob/(1-prob))-cfs[1])/cfs[2])
+  return(ed)
+}
+
+ed50<-edFun(modDrcGlm)
+  
+B<-1e4
+ed50Vect<-rep(NA,B)
+for(b in 1:B){
+  simDatBS<-simDat[sample(1:nrow(simDat),size=nrow(simDat),replace=TRUE),]
+  modDrcGlmBS<-  glm(carriage~log(doseConcAvg),data=simDatBS %>% dplyr::filter(VaccName=="Saline"),family=binomial)
+  ed50Vect[b]<-edFun(modDrcGlmBS)
+}
+
+ed50CI<-quantile(ed50Vect,probs=c(0.025,0.975))
+ed50Mod<-format(nsmall=0,trim=TRUE,big.mark=",",round(digits=0,c(ed50,ed50CI)))
+
+modDrcSum<-summary(modDrcGlm)$coefficients %>%
+  as.data.frame()
+modDrcSum<-modDrcSum %>%
+  mutate(parameter=rownames(modDrcSum))
+colnames(modDrcSum)<-c("Estimate","Std.Error","z.value","p.value","parameter")
+  
+modDrcSum %>%
+  mutate(p.value=ifelse(parameter!="(Intercept)" & p.value<0.05,cell_spec(format(nsmall=4,round(digits=4,p.value)),bold=T),cell_spec(format(nsmall=4,round(digits=4,p.value)),bold=F))) %>%
+  dplyr::select(!parameter) %>%
+  kable(escape=FALSE,col.names=c("Estimate","Std. error","z value","p value"),caption=paste(sep="","(DUMMY TABLE) Summary of the dose-response model fitted to data from participants randomised to saline. ED50, the minimum dose that will on average result in 50% carriage is estimated to be ",ed50Mod[1]," with 95% CI (",paste(collapse=", ",ed50Mod[2:3]),").")) %>%
+  kableExtra::kable_styling(full_width = FALSE)
+```
+
+```{r exploAnalysisDrcPlot, fig.cap="(DUMMY FIGURE) Dose-response curve estimated from the data for participants randomised to the saline arm."}
+dfPred<-data.frame(
+  logDoseConcAvg=seq(log(1),log(200000),length=1000)
+) %>%
+  mutate(
+    doseConcAvg=exp(logDoseConcAvg)
+  )
+
+tmpPred<-as.data.frame(predict(modDrcGlm,newdata=dfPred,interval="link",se.fit=TRUE))
+
+invLogit<-function(x){
+  res<-exp(x)/(1+exp(x))
+  return(res)
+}
+
+dfPred<-dfPred %>%
+  dplyr::mutate(
+    y=invLogit(tmpPred$fit),
+    yLow=invLogit(tmpPred$fit-qnorm(0.975)*tmpPred$se.fit),
+    yUpp=invLogit(tmpPred$fit+qnorm(0.975)*tmpPred$se.fit),
+    )
+
+tmpDat<-simDat %>%
+  dplyr::filter(VaccName=="Saline") %>%
+  dplyr::group_by(dose) %>%
+  dplyr::summarise(
+    n=n(),
+    k=sum(carriage),
+    propCarriage=mean(carriage)
+    ) %>%
+  mutate(
+    propCarriageLow=NA,
+    propCarriageUpp=NA
+  )
+
+for(j in 1:nrow(tmpDat)){
+  tmp<-binom.test(x=tmpDat$k[j],n=tmpDat$n[j])$conf.int
+  tmpDat$propCarriageLow[j]<-tmp[1]
+  tmpDat$propCarriageUpp[j]<-tmp[2]
+}
+
+ggplot() +
+  geom_segment(mapping=aes(x=ed50,xend=ed50,y=0,yend=0.5),lty=2,lwd=0.5,col="steelblue") +
+  geom_segment(mapping=aes(x=0,xend=ed50,y=0.5,yend=0.5),lty=2,lwd=0.5,col="steelblue") +
+  geom_ribbon(mapping=aes(xmin=ed50CI[1],xmax=ed50CI[2],y=seq(0,1,length=100)),fill="steelblue",alpha=0.25) +
+  geom_line(data=dfPred,mapping=aes(x=doseConcAvg,y=y),col="orange",lwd=1) +
+  geom_ribbon(data=dfPred,mapping=aes(x=doseConcAvg,ymin=yLow,ymax=yUpp),fill="orange",alpha=0.25) +
+  geom_point(data=simDat,mapping=aes(x=doseConcAvg,y=carriage),col="darkgrey",alpha=0.5) +
+  geom_point(data=tmpDat,mapping=aes(x=dose,y=propCarriage),col="black",size=3) +
+  geom_errorbar(dat=tmpDat,mapping=aes(x=dose,ymin=propCarriageLow,ymax=propCarriageUpp),width=2000) +
+  xlab("Dose (CFU)") +
+  ylab("Probability of carriage") +
+  labs(title="Dose-response curve estimated from the saline randomised study participants.",caption=paste(sep="","A 2-parameter log-logistic model was used for the dose-response curve estimation.\nGrey dots show the individual carriage data as a function of actual dose delivered.\nBlack dots with error bars show the estimated proportion of carriage by target dose and the associated 95% confidence intervals.\nDashed blue lines and band indicate the ED50 threshold dose ",ed50Mod[1]," CFU with the 95% CI (",paste(collapse=", ",ed50Mod[2:3]),").")) +
+  theme_light()
+```
+
+
+#### Temporal dynamics of pneumococcal colonisation
+
+The study will not run over long enough a period of time to properly investigate the presence or absence of seasonal effects. Using flexible regression models, we can however investigate whether there seems to be evidence for temporal variation of colonisation probabilities (for both experimental and natural carriage). Specifically we can investigate:
+
+1. Whether there is temporal variation in the probability of natural colonisation, i.e. carriage of vaccine-type serotypes other than the experimental 6B strain.
+
+2. Whether there is temporal variation in the probability of experimental colonisation by serotype 6B.
+
+The first would most likely point to variation in pneumoccocal exposure over time, whereas the second could point to variations in susceptivility of colonisation over time.
+
+For these investigations, we will refit the model from the main outcome analysis, but include restricted cubic spline terms for time of Visit C for each participant since Visit C of the first study participant.
+
+To test the null hypothesis of no temporal variation, we will perform likelihood ratio tests comparing the 2 models to the respective models without the time variable.
+
+As for the secondary analysis for natural, vaccine-type carriage, we need to point out that there may be far too few natural carriage events to fit the natural carriage model. Also the study was not powered to investigate temporal investigations, so we will report results mostly descriptively and for the purpose of hypothesis generation.
+
+```{r}
+firstVisitC<-min(ymd(simDat$visitC_date))
+simDat<-simDat %>%
+  dplyr::mutate(timeVisitC_sinceStudyStart=as.numeric(ymd(visitC_date)-firstVisitC))
+
+tmp<-rcs(simDat$timeVisitC_sinceStudyStart) # need to manually add the spline terms as no direct support by logbin
+simDat<-simDat %>%
+  dplyr::mutate(
+    timeVisitC_rcs1=as.numeric(tmp[,1]),
+    timeVisitC_rcs2=as.numeric(tmp[,2]),
+    timeVisitC_rcs3=as.numeric(tmp[,3]),
+    timeVisitC_rcs4=as.numeric(tmp[,4])
+  )
+```
+
+```{r exploObjTimeEffectNot6B}
+simDat$doseGroup<-factor(as.character(simDat$doseGroup),levels=c("CFU 160000","CFU 80000","CFU 20000"))
+
+modTimeNot6B<-logbin::logbin(carriageNot6B~VaccName+doseGroup+timeVisitC_rcs1+timeVisitC_rcs2+timeVisitC_rcs3+timeVisitC_rcs4,data=simDat,start=c(coef(mod),rep(0,4)),method="ab") # if boundary issues with EM algorithm, we will use method="glm2" or method="ab"
+
+pGlm<-summary(modTimeNot6B)$coefficients["VaccNamePCV-13","Pr(>|z|)"]
+pLrt<-lmtest::lrtest(modTimeNot6B,modNot6B)$`Pr(>Chisq)`[2]
+rrGlmVacc<-exp(c(summary(modTimeNot6B)$coefficients["VaccNamePCV-13","Estimate"],confint(modTimeNot6B)["VaccNamePCV-13",]))
+
+modRes<-summary(modTimeNot6B)$coefficients %>%
+  as.data.frame() %>%
+  mutate(
+    parameter=case_when(
+      rownames(summary(modTimeNot6B)$coefficients)=="(Intercept)"~"(Intercept)",
+      rownames(summary(modTimeNot6B)$coefficients)=="VaccNamePCV-13"~"PCV-13 vaccine",
+      rownames(summary(modTimeNot6B)$coefficients)=="doseGroupCFU 20000"~"Dose: CFU 20,000",
+      rownames(summary(modTimeNot6B)$coefficients)=="doseGroupCFU 80000"~"Dose: CFU 80,000",
+      rownames(summary(modTimeNot6B)$coefficients)=="timeVisitC_rcs1"~"Time since study start",
+      rownames(summary(modTimeNot6B)$coefficients)=="timeVisitC_rcs2"~"Time since study start'",
+      rownames(summary(modTimeNot6B)$coefficients)=="timeVisitC_rcs3"~"Time since study start''",
+      rownames(summary(modTimeNot6B)$coefficients)=="timeVisitC_rcs4"~"Time since study start'''"
+    )
+  )
+
+colnames(modRes)<-c("Estimate","Std.err","z.value","p.value","parameter")
+
+modRes %>%
+  dplyr::select(parameter,Estimate,Std.err,z.value,p.value) %>%
+  mutate(p.value=ifelse(parameter!="(Intercept)" & p.value<0.05,cell_spec(format(nsmall=3,round(digits=3,p.value)),bold=T),cell_spec(format(nsmall=3,round(digits=3,p.value)),bold=F))) %>%
+  kable(row.names = FALSE,col.names=c("","Estimate","Std. error","Z statistic","p-value"),escape=FALSE,caption=paste(sep="","(DUMMY TABLE) Summary of the log-binomial regression model fit for natural, vaccine-type carriage with terms for time since study start. The baseline natural carriage risk for a saline-randomised participant inoculated at the CFU 160,000 dose is ",format(digits=1,round(digits=1,100*exp(modRes["(Intercept)","Estimate"]))),"%, 95% CI (",paste(collapse="%, ",format(nsmall=1,round(digits=1,100*exp(c(modRes["(Intercept)","Estimate"]-qnorm(0.975)*modRes["(Intercept)","Std.err"],modRes["(Intercept)","Estimate"]+qnorm(0.975)*modRes["(Intercept)","Std.err"]))))),"%). There is ",ifelse(pGlm<0.05,"a","no")," statistically significant effect of PCV-13 vaccine on the probability of natural carriage (RR ",format(nsmall=2,round(digits=2,rrGlmVacc[1])),", 95% CI (",paste(collapse=", ",format(nsmall=2,round(digits=2,rrGlmVacc[2:3]))),"), p ",ifelse(pGlm>=0.001,paste(sep="","= ",format(nsmall=3,round(digits=3,pGlm))),"< 0.001"),"). There is ",ifelse(pLrt<0.05,"a","no")," statistically significant effect of time since study start on the probability of natural carriage."),digits=3) %>%
+  kable_styling(full_width = FALSE)
+```
+
+```{r exploObjTimeEffect6B}
+simDat$doseGroup<-factor(as.character(simDat$doseGroup),levels=c("CFU 160000","CFU 80000","CFU 20000"))
+
+modTime6B<-logbin::logbin(carriage~VaccName+doseGroup+timeVisitC_rcs1+timeVisitC_rcs2+timeVisitC_rcs3+timeVisitC_rcs4,data=simDat,start=c(coef(mod),rep(0,4)),method="ab")
+
+pGlm<-summary(modTime6B)$coefficients["VaccNamePCV-13","Pr(>|z|)"]
+pLrt<-lmtest::lrtest(modTime6B,mod)$`Pr(>Chisq)`[2]
+rrGlmVacc<-exp(c(summary(modTime6B)$coefficients["VaccNamePCV-13","Estimate"],confint(modTime6B)["VaccNamePCV-13",]))
+
+modRes<-summary(modTime6B)$coefficients %>%
+  as.data.frame() %>%
+  mutate(
+    parameter=case_when(
+      rownames(summary(modTime6B)$coefficients)=="(Intercept)"~"(Intercept)",
+      rownames(summary(modTime6B)$coefficients)=="VaccNamePCV-13"~"PCV-13 vaccine",
+      rownames(summary(modTime6B)$coefficients)=="doseGroupCFU 20000"~"Dose: CFU 20,000",
+      rownames(summary(modTime6B)$coefficients)=="doseGroupCFU 80000"~"Dose: CFU 80,000",
+      rownames(summary(modTime6B)$coefficients)=="timeVisitC_rcs1"~"Time since study start",
+      rownames(summary(modTime6B)$coefficients)=="timeVisitC_rcs2"~"Time since study start'",
+      rownames(summary(modTime6B)$coefficients)=="timeVisitC_rcs3"~"Time since study start''",
+      rownames(summary(modTime6B)$coefficients)=="timeVisitC_rcs4"~"Time since study start'''"
+    )
+  )
+
+colnames(modRes)<-c("Estimate","Std.err","z.value","p.value","parameter")
+
+modRes %>%
+  dplyr::select(parameter,Estimate,Std.err,z.value,p.value) %>%
+  mutate(p.value=ifelse(parameter!="(Intercept)" & p.value<0.05,cell_spec(format(nsmall=3,round(digits=3,p.value)),bold=T),cell_spec(format(nsmall=3,round(digits=3,p.value)),bold=F))) %>%
+  kable(row.names = FALSE,col.names=c("","Estimate","Std. error","Z statistic","p-value"),escape=FALSE,caption=paste(sep="","(DUMMY TABLE) Summary of the log-binomial regression model fit for experimental serotype 6B carriage with terms for time since study start. The baseline carriage risk for a saline-randomised participant inoculated at the CFU 160,000 dose is ",format(digits=1,round(digits=1,100*exp(modRes["(Intercept)","Estimate"]))),"%, 95% CI (",paste(collapse="%, ",format(nsmall=1,round(digits=1,100*exp(c(modRes["(Intercept)","Estimate"]-qnorm(0.975)*modRes["(Intercept)","Std.err"],modRes["(Intercept)","Estimate"]+qnorm(0.975)*modRes["(Intercept)","Std.err"]))))),"%). There is ",ifelse(pGlm<0.05,"a","no")," statistically significant effect of PCV-13 vaccine on the probability of serotype 6B carriage (RR ",format(nsmall=2,round(digits=2,rrGlmVacc[1])),", 95% CI (",paste(collapse=", ",format(nsmall=2,round(digits=2,rrGlmVacc[2:3]))),"), p ",ifelse(pGlm>=0.001,paste(sep="","= ",format(nsmall=3,round(digits=3,pGlm))),"< 0.001"),"). There is ",ifelse(pLrt<0.05,"a","no")," statistically significant effect of time since study start on the probability of experimental serotype 6B carriage."),digits=3) %>%
+  kable_styling(full_width = FALSE)
+```
+
+
+#### Time between vaccination (visit B) and inoculation (visit D)
+
+We will provide histograms and tables of medians and inter-quartile ranges (overall, by study arm, by inoculation dose and by experimental carriage status) of the time between visits B and D to describe the variation and to explore whether there are differences between study arms and between carriers and non-carriers.
+
+Should there be substantial differences in time between vaccination and inoculation visits between carriers and non-carriers, we will include this variable in the main objective model for phase 1 as a sensitivity analysis.
+
+```{r exploObjTimeBetweenVaccAndInoc, fig.cap="(DUMMY FIGURE) Time between vaccination and inoculation visits overall, by study arm, inoculation dose and carriage status.", fig.height=12}
+simDat$doseGroup<-factor(as.character(simDat$doseGroup),levels=c("CFU 20000","CFU 80000","CFU 160000"))
+
+simDat <- simDat %>%
+  dplyr::mutate(
+    timeBtoD=as.numeric(ymd(visitC_date)-ymd(visitB_date)+7) # visit C is 1 week = 7 days before visit D
+  )
+
+timeBtoD<-simDat %>%
+  dplyr::summarise(
+    median=median(timeBtoD),
+    IQR=paste(sep="","(",format(nsmall=2,round(digits=2,quantile(timeBtoD,probs=0.25))),",",format(nsmall=2,round(digits=2,quantile(timeBtoD,probs=0.75))),")")
+  )
+timeBtoD<-cbind("All",timeBtoD)
+colnames(timeBtoD)<-c("group","median","IQR")
+
+timeBtoD_vacc<-simDat %>%
+  dplyr::group_by(VaccName) %>%
+  dplyr::summarise(
+    median=median(timeBtoD),
+    IQR=paste(sep="","(",format(nsmall=2,round(digits=2,quantile(timeBtoD,probs=0.25))),",",format(nsmall=2,round(digits=2,quantile(timeBtoD,probs=0.75))),")"),
+    .groups="drop"
+  )
+colnames(timeBtoD_vacc)<-c("group","median","IQR")
+pVacc<-wilcox.test(timeBtoD~VaccName,data=simDat)$p.value
+
+timeBtoD_dose<-simDat %>%
+  dplyr::group_by(doseGroup) %>%
+  dplyr::summarise(
+    median=median(timeBtoD),
+    IQR=paste(sep="","(",format(nsmall=2,round(digits=2,quantile(timeBtoD,probs=0.25))),",",format(nsmall=2,round(digits=2,quantile(timeBtoD,probs=0.75))),")"),
+    .groups="drop"
+  )
+colnames(timeBtoD_dose)<-c("group","median","IQR")
+pDose<-kruskal.test(timeBtoD~doseGroup,data=simDat)$p.value
+
+timeBtoD_carr<-simDat %>%
+  dplyr::group_by(carriage) %>%
+  dplyr::summarise(
+    median=median(timeBtoD),
+    IQR=paste(sep="","(",format(nsmall=2,round(digits=2,quantile(timeBtoD,probs=0.25))),",",format(nsmall=2,round(digits=2,quantile(timeBtoD,probs=0.75))),")"),
+    .groups="drop"
+  )
+colnames(timeBtoD_carr)<-c("group","median","IQR")
+pCarr<-wilcox.test(timeBtoD~carriage,data=simDat)$p.value
+timeBtoD_carr[,1]<-case_when(timeBtoD_carr[,1]==0~"No",timeBtoD_carr[,1]==1~"Yes")
+
+timeBtoD_fullTab<-rbind(timeBtoD,timeBtoD_vacc,timeBtoD_dose,timeBtoD_carr)
+
+timeBtoD_fullTab %>%
+  knitr::kable(col.names=c(" ","Median","IQR"),digits=2,caption="(DUMMY TABLE) Median and inter-quartile range for the time between vaccination and inoculation visits overall, by study arm, inoculation dose and carriage status.") %>%
+  kableExtra::kable_styling(full_width=FALSE) %>%
+  kableExtra::pack_rows(group_label="Overall",start=1,end=1) %>%
+  kableExtra::pack_rows(group_label=paste(sep="","Study Arm (Mann-Whitney-Wilcoxon p = ",format(nsmall=4,round(digits=4,pVacc)),")."),start=2,end=3) %>%
+  kableExtra::pack_rows(group_label=paste(sep="","Inoculation dose (Kruskal-Wallis p = ",format(nsmall=4,round(digits=4,pDose)),")."),start=4,end=6) %>%
+  kableExtra::pack_rows(group_label=paste(sep="","Experimental 6B carriage (Mann-Whitney-Wilcoxon p = ",format(nsmall=4,round(digits=4,pCarr)),")."),start=7,end=8)
+
+g1<-simDat %>%
+  ggplot(mapping=aes(x=timeBtoD)) +
+  geom_histogram(bins=length(unique(simDat$timeBtoD)),col="white") +
+  theme_light() +
+  xlab("") +
+  ylab("Frequency") +
+  labs(title="All participants")
+
+g2<-simDat %>%
+  ggplot(mapping=aes(x=timeBtoD,fill=VaccName)) +
+  geom_histogram(bins=length(unique(simDat$timeBtoD)),col="white") +
+  theme_light() +
+  scale_fill_manual(values=c("steelblue","orange")) +
+  xlab("") +
+  ylab("Frequency") +
+  labs(title="By study arm.") +
+  guides(fill="none") +
+  facet_wrap(~VaccName)
+
+g3<-simDat %>%
+  ggplot(mapping=aes(x=timeBtoD,fill=doseGroup)) +
+  geom_histogram(bins=length(unique(simDat$timeBtoD)),col="white") +
+  theme_light() +
+  scale_fill_manual(values=c("grey80","grey50","grey20")) +
+  xlab("") +
+  ylab("Frequency") +
+  labs(title="By inoculation dose.") +
+  guides(fill="none") +
+  facet_wrap(~doseGroup)
+
+g4<-simDat %>%
+  ggplot(mapping=aes(x=timeBtoD,fill=ifelse(carriage==1,"Experimental carriage.","No experimental carriage"))) +
+  geom_histogram(bins=length(unique(simDat$timeBtoD)),col="white") +
+  theme_light() +
+  scale_fill_manual(values=c("grey40","grey20")) +
+  xlab("Time between visits B and D (days)") +
+  ylab("Frequency") +
+  labs(title="By experimental 6B carriage.") +
+  guides(fill="none") +
+  facet_wrap(~ifelse(carriage==1,"Experimental carriage.","No experimental carriage"))
+
+grid.arrange(g1,g2,g3,g4,nrow=4)
+```
+
+#### Community vs. student participants
+
+MARVELS PCV-13 recruited both among healthy general population members ("community") and university students. As an exploratory analysis we will compare the carriage rates between both sets of participants. Specifically, we will add a term for participant type (community or student) $X_{type}$ as predictor in the main log-binomial regression model and report its estimate and 95% confidence interval:
+
+$$
+\log(\pi) = \log\left(E[Y|X_{20,000},X_{80,000},X_{PCV13}]\right) = \beta_0 + \beta_{20,000}\cdot X_{20,000} + \beta_{80,000}\cdot X_{80,000} + \beta_{PCV13}\cdot X_{PCV13} + \beta_{type}\cdot X_{type}
+$$
+
+```{r exploObjEffectCommunity6B}
+simDat$doseGroup<-factor(as.character(simDat$doseGroup),levels=c("CFU 160000","CFU 80000","CFU 20000"))
+modTime6B.comstud<-logbin::logbin(carriage~VaccName+doseGroup+student,data=simDat,)
+
+pGlm<-summary(modTime6B.comstud)$coefficients["student","Pr(>|z|)"]
+rrGlmVacc<-exp(c(summary(modTime6B.comstud)$coefficients["student","Estimate"],confint(modTime6B.comstud)["student",]))
+
+modRes<-summary(modTime6B.comstud)$coefficients %>%
+  as.data.frame() %>%
+  mutate(
+    parameter=case_when(
+      rownames(summary(modTime6B.comstud)$coefficients)=="(Intercept)"~"(Intercept)",
+      rownames(summary(modTime6B.comstud)$coefficients)=="VaccNamePCV-13"~"PCV-13 vaccine",
+      rownames(summary(modTime6B.comstud)$coefficients)=="doseGroupCFU 20000"~"Dose: CFU 20,000",
+      rownames(summary(modTime6B.comstud)$coefficients)=="doseGroupCFU 80000"~"Dose: CFU 80,000",
+      rownames(summary(modTime6B.comstud)$coefficients)=="student"~"Student"
+    )
+  )
+
+colnames(modRes)<-c("Estimate","Std.err","z.value","p.value","parameter")
+
+modRes %>%
+  dplyr::select(parameter,Estimate,Std.err,z.value,p.value) %>%
+  mutate(p.value=ifelse(parameter!="(Intercept)" & p.value<0.05,cell_spec(format(nsmall=3,round(digits=3,p.value)),bold=T),cell_spec(format(nsmall=3,round(digits=3,p.value)),bold=F))) %>%
+  kable(row.names = FALSE,col.names=c("","Estimate","Std. error","Z statistic","p-value"),escape=FALSE,caption=paste(sep="","(DUMMY TABLE) Summary of the log-binomial regression model fit for experimental serotype 6B carriage with a term for student or community member. The baseline carriage risk for a saline-randomised participant inoculated at the CFU 160,000 dose is ",format(digits=1,round(digits=1,100*exp(modRes["(Intercept)","Estimate"]))),"%, 95% CI (",paste(collapse="%, ",format(nsmall=1,round(digits=1,100*exp(c(modRes["(Intercept)","Estimate"]-qnorm(0.975)*modRes["(Intercept)","Std.err"],modRes["(Intercept)","Estimate"]+qnorm(0.975)*modRes["(Intercept)","Std.err"]))))),"%). There is ",ifelse(pGlm<0.05,"a","no")," statistically significant effect of student / community membership on the probability of serotype 6B carriage (RR of carriage in students compared to community members ",format(nsmall=2,round(digits=2,rrGlmVacc[1])),", 95% CI (",paste(collapse=", ",format(nsmall=2,round(digits=2,rrGlmVacc[2:3]))),"), p ",ifelse(pGlm>=0.001,paste(sep="","= ",format(nsmall=3,round(digits=3,pGlm))),"< 0.001"),")."),digits=3) %>%
+  kable_styling(full_width = FALSE)
+```
+
+## Phase 2
+
+### Primary analysis
+
+We are primarily interested in 2 effects during phase 2:
+
+* Effect of PCV-13 vaccination on the risk of carriage during phase 2.
+* Effect of prior serotype 6B carriage on the risk of carriage during phase 2.
+
+The main analysis will be a log-binomial model with PCV-13 vaccination and prior serotype 6B carriage as predictors. This model will include an interaction term for vaccination and prior carriage to interrogate whether there is synergy between PCV-13 vaccination and prior serotype 6B carriage (i.e. whether or not the effects of vaccination and prior carriage boost or reduce each other). This model will also include the phase 1 inoculation dose group indicator variables as additional covariates. In mathematical notation, the model we will fit is specified as
+
+$$
+\log(\pi) = \log\left(E[Y|X_{20,000},X_{80,000},X_{PCV13},X_{phase1Carriage}]\right) = \beta_0 + \beta_{20,000}\cdot X_{20,000} + \beta_{80,000}\cdot X_{80,000} + \beta_{PCV13}\cdot X_{PCV13} + \beta_{phase1Carriage}\cdot X_{phase1Carriage} + \beta_{interaction}\cdot X_{PCV13}\cdot X_{phase1Carriage} 
+$$
+
+This model will be summarised in a table.
+
+```{r phase2ModelSummary}
+simDat<-simDat %>% # have to manually create interaction term as no support for this in logbin
+  mutate(
+    carriageVaccine=case_when(
+      carriage==1 & VaccName=="PCV-13"~1,
+      TRUE~0
+    )
+  )
+
+modPhase2<-logbin(phase2Carriage~carriage+VaccName+carriageVaccine+doseGroup,data=simDat)
+pGlmVacc<-summary(modPhase2)$coefficients["VaccNamePCV-13","Pr(>|z|)"]
+pGlmCarr<-summary(modPhase2)$coefficients["carriage","Pr(>|z|)"]
+pGlmInt<-summary(modPhase2)$coefficients["carriageVaccine","Pr(>|z|)"]
+rrGlmVacc<-exp(c(summary(modPhase2)$coefficients["VaccNamePCV-13","Estimate"],confint(modPhase2)["VaccNamePCV-13",]))
+rrGlmCarr<-exp(c(summary(modPhase2)$coefficients["carriage","Estimate"],confint(modPhase2)["carriage",]))
+rrGlmInt<-exp(c(summary(modPhase2)$coefficients["carriageVaccine","Estimate"],confint(modPhase2)["carriageVaccine",]))
+
+modRes<-summary(modPhase2)$coefficients %>%
+  as.data.frame() %>%
+  mutate(
+    parameter=case_when(
+      rownames(summary(modPhase2)$coefficients)=="(Intercept)"~"(Intercept)",
+      rownames(summary(modPhase2)$coefficients)=="carriage"~"Phase 1 carriage",
+      rownames(summary(modPhase2)$coefficients)=="VaccNamePCV-13"~"PCV-13 vaccine",
+      rownames(summary(modPhase2)$coefficients)=="carriageVaccine"~"PCV-13 vaccine : Phase 1 carriage",
+      rownames(summary(modPhase2)$coefficients)=="doseGroupCFU 20000"~"Dose: CFU 20,000",
+      rownames(summary(modPhase2)$coefficients)=="doseGroupCFU 80000"~"Dose: CFU 80,000"
+    )
+  )
+
+colnames(modRes)<-c("Estimate","Std.err","z.value","p.value","parameter")
+
+modRes %>%
+  dplyr::select(parameter,Estimate,Std.err,z.value,p.value) %>%
+  mutate(p.value=ifelse(parameter!="(Intercept)" & p.value<0.05,cell_spec(format(nsmall=3,round(digits=3,p.value)),bold=T),cell_spec(format(nsmall=3,round(digits=3,p.value)),bold=F))) %>%
+  kable(row.names = FALSE,col.names=c("","Estimate","Std. error","Z statistic","p-value"),escape=FALSE,caption=paste(sep="","(DUMMY TABLE) Summary of the log-binomial regression model fit for phase 2 carriage. The baseline carriage risk during phase 2 for a saline-randomised participant inoculated at the CFU 160,000 dose and without prior carriage is ",format(digits=1,round(digits=1,100*exp(modRes["(Intercept)","Estimate"]))),"%, 95% CI (",paste(collapse="%, ",format(nsmall=1,round(digits=1,100*exp(c(modRes["(Intercept)","Estimate"]-qnorm(0.975)*modRes["(Intercept)","Std.err"],modRes["(Intercept)","Estimate"]+qnorm(0.975)*modRes["(Intercept)","Std.err"]))))),"%). There is ",ifelse(pGlmCarr<0.05,"a","no")," statistically significant effect of prior serotype 6B carriage on the probability of serotype 6B carriage during phase 2 (RR ",format(nsmall=2,round(digits=2,rrGlmCarr[1])),", 95% CI (",paste(collapse=", ",format(nsmall=2,round(digits=2,rrGlmCarr[2:3]))),"), p ",ifelse(pGlmCarr>=0.001,paste(sep="","= ",format(nsmall=3,round(digits=3,pGlmCarr))),"< 0.001"),"). There is ",ifelse(pGlmVacc<0.05,"a","no")," statistically significant effect of PCV-13 vaccine on the probability of serotype 6B carriage during phase 2 (RR ",format(nsmall=2,round(digits=2,rrGlmVacc[1])),", 95% CI (",paste(collapse=", ",format(nsmall=2,round(digits=2,rrGlmVacc[2:3]))),"), p ",ifelse(pGlmVacc>=0.001,paste(sep="","= ",format(nsmall=3,round(digits=3,pGlmVacc))),"< 0.001"),"). There is ",ifelse(pGlmInt<0.05,"a","no")," statistically significant interaction effect between PCV-13 vaccination and prior serotype 6B carriage on the probability of serotype 6B carriage during phase 2 (RR ",format(nsmall=2,round(digits=2,rrGlmInt[1])),", 95% CI (",paste(collapse=", ",format(nsmall=2,round(digits=2,rrGlmInt[2:3]))),"), p ",ifelse(pGlmInt>=0.001,paste(sep="","= ",format(nsmall=3,round(digits=3,pGlmInt))),"< 0.001"),")."),digits=3) %>%
+  kable_styling(full_width = FALSE)
+```
+
+Further, carriage results according to PCV-13 vaccination and prior serotype 6B carriage status will be summarised in 2x2 tables, stratified by PCV-13 vaccination status, respectively phase 1 inoculation dose both overall and further stratified by phase 1 inoculation dose. We will report relative risks with 95% confidence intervals and p-values from a Fisher exact test for each table.
+
+```{r phase2Tables2x2}
+simDat20<-simDat %>% dplyr::filter(dose==20000)
+simDat80<-simDat %>% dplyr::filter(dose==80000)
+simDat160<-simDat %>% dplyr::filter(dose==160000)
+
+tab20Vacc<-table(simDat20$VaccName,simDat20$phase2Carriage)
+tab80Vacc<-table(simDat80$VaccName,simDat80$phase2Carriage)
+tab160Vacc<-table(simDat160$VaccName,simDat160$phase2Carriage)
+tabAllVacc<-table(simDat$VaccName,simDat$phase2Carriage)
+
+tab20Carr<-table(simDat20$carriage,simDat20$phase2Carriage)
+tab80Carr<-table(simDat80$carriage,simDat80$phase2Carriage)
+tab160Carr<-table(simDat160$carriage,simDat160$phase2Carriage)
+tabAllCarr<-table(simDat$carriage,simDat$phase2Carriage)
+
+tabFull<-rbind(tab20Vacc,tab80Vacc,tab160Vacc,tabAllVacc,tab20Carr,tab80Carr,tab160Carr,tabAllCarr)
+
+pFish20Vacc<-fisher.test(tab20Vacc)$p.value
+pFish20Vacc<-ifelse(pFish20Vacc>=0.001,paste(sep=""," = ",format(nsmall=3,round(digits=3,pFish20Vacc)))," < 0.001")
+pFish80Vacc<-fisher.test(tab80Vacc)$p.value
+pFish80Vacc<-ifelse(pFish80Vacc>=0.001,paste(sep=""," = ",format(nsmall=3,round(digits=3,pFish80Vacc)))," < 0.001")
+pFish160Vacc<-fisher.test(tab160Vacc)$p.value
+pFish160Vacc<-ifelse(pFish160Vacc>=0.001,paste(sep=""," = ",format(nsmall=3,round(digits=3,pFish160Vacc)))," < 0.001")
+pFishAllVacc<-fisher.test(tabAllVacc)$p.value
+pFishAllVacc<-ifelse(pFishAllVacc>=0.001,paste(sep=""," = ",format(nsmall=3,round(digits=3,pFishAllVacc)))," < 0.001")
+
+pFish20Carr<-fisher.test(tab20Carr)$p.value
+pFish20Carr<-ifelse(pFish20Carr>=0.001,paste(sep=""," = ",format(nsmall=3,round(digits=3,pFish20Carr)))," < 0.001")
+pFish80Carr<-fisher.test(tab80Carr)$p.value
+pFish80Carr<-ifelse(pFish80Carr>=0.001,paste(sep=""," = ",format(nsmall=3,round(digits=3,pFish80Carr)))," < 0.001")
+pFish160Carr<-fisher.test(tab160Carr)$p.value
+pFish160Carr<-ifelse(pFish160Carr>=0.001,paste(sep=""," = ",format(nsmall=3,round(digits=3,pFish160Carr)))," < 0.001")
+pFishAllCarr<-fisher.test(tabAllCarr)$p.value
+pFishAllCarr<-ifelse(pFishAllCarr>=0.001,paste(sep=""," = ",format(nsmall=3,round(digits=3,pFishAllCarr)))," < 0.001")
+
+rownames(tabFull)[rownames(tabFull)=="0"]<-"No prior 6B carriage"
+rownames(tabFull)[rownames(tabFull)=="1"]<-"Prior 6B carriage"
+
+tabFull %>%
+  kable(caption=paste(sep="","(DUMMY TABLE) Number of participants colonised with S. Pneumoniae during phase 2 by PCV-13 vaccination status and prior carriage, stratified by phase 1 inoculation dose."),col.names=c("Not colonised","Colonised"),row.names=T) %>%
+  kable_styling(full_width = F) %>%
+  pack_rows(paste(sep="","Effect of PCV-13 vaccine: CFU 20,000 (Fisher test p",pFish20Vacc,")"),1,2) %>%
+  pack_rows(paste(sep="","Effect of PCV-13 vaccine: CFU 80,000 (Fisher test p",pFish80Vacc,")"),3,4) %>%
+  pack_rows(paste(sep="","Effect of PCV-13 vaccine: CFU 160,000 (Fisher test p",pFish160Vacc,")"),5,6) %>%
+  pack_rows(paste(sep="","Effect of PCV-13 vaccine: All doses (Fisher test p",pFishAllVacc,")"),7,8) %>%
+  pack_rows(paste(sep="","Effect of prior carriage: CFU 20,000 (Fisher test p",pFish20Carr,")"),9,10) %>%
+  pack_rows(paste(sep="","Effect of prior carriage: CFU 80,000 (Fisher test p",pFish80Carr,")"),11,12) %>%
+  pack_rows(paste(sep="","Effect of prior carriage: CFU 160,000 (Fisher test p",pFish160Carr,")"),13,14) %>%
+  pack_rows(paste(sep="","Effect of prior carriage: All doses (Fisher test p",pFishAllCarr,")"),15,16)
+```
+
+### Secondary analysis
+
+As a secondary analysis, to also interrogate the protective effects (if any) of natural carriage that was recorded during Phase 1, we will fit one more model. Specifically, we will fit a log-binomial model which includes terms for both 6B and non-6B carriage during Phase 1.
+
+$$
+\begin{align}
+\log(\pi) = \log\left(E[Y|X_{20,000},X_{80,000},X_{PCV13},X_{phase1Carriage6B},X_{phase1CarriageNon6B}]\right) =& \beta_0 + \beta_{20,000}\cdot X_{20,000} + \beta_{80,000}\cdot X_{80,000} + \beta_{PCV13}\cdot X_{PCV13} \\
+& \qquad + \beta_{phase1Carriage6B}\cdot X_{phase1Carriage6B} + \beta_{interaction6B}\cdot X_{PCV13}\cdot X_{phase1Carriage6B} \\
+& \qquad + \beta_{phase1CarriageNon6B}\cdot X_{phase1CarriageNon6B}  + \beta_{interactionNon6B}\cdot X_{PCV13}\cdot X_{phase1CarriageNon6B} 
+\end{align}
+$$
+
+Depending on natural carriage events, we may need to drop the interaction term between natural carriage and vaccination from this model to have stable parameter estimates.
+
+We will summarise this model in a similar table as to the main analysis model.
+
+```{r secObjPhase2}
+simDat$doseGroup<-factor(as.character(simDat$doseGroup),levels=c("CFU 160000","CFU 80000","CFU 20000"))
+
+simDat<-simDat %>% # have to manually create interaction term as no support for this in logbin
+  mutate(
+    carriageNot6BVaccine=case_when(
+      carriageNot6B==1 & VaccName=="PCV-13"~1,
+      TRUE~0
+    )
+  )
+
+modPhase2Sec<-logbin(phase2Carriage~VaccName+carriage+carriageVaccine+carriageNot6B+carriageNot6BVaccine+doseGroup,data=simDat,method="glm2") # if the default CEM agorithm results in boundary value fits, then method="glm2" or method="ab" will be used
+pGlmVacc<-summary(modPhase2Sec)$coefficients["VaccNamePCV-13","Pr(>|z|)"]
+pGlmCarr<-summary(modPhase2Sec)$coefficients["carriage","Pr(>|z|)"]
+pGlmInt<-summary(modPhase2Sec)$coefficients["carriageVaccine","Pr(>|z|)"]
+pGlmCarrNot6B<-summary(modPhase2Sec)$coefficients["carriageNot6B","Pr(>|z|)"]
+pGlmIntNot6B<-summary(modPhase2Sec)$coefficients["carriageNot6BVaccine","Pr(>|z|)"]
+rrGlmVacc<-exp(c(summary(modPhase2Sec)$coefficients["VaccNamePCV-13","Estimate"],confint(modPhase2Sec)["VaccNamePCV-13",]))
+rrGlmCarr<-exp(c(summary(modPhase2Sec)$coefficients["carriage","Estimate"],confint(modPhase2Sec)["carriage",]))
+rrGlmInt<-exp(c(summary(modPhase2Sec)$coefficients["carriageVaccine","Estimate"],confint(modPhase2Sec)["carriageVaccine",]))
+rrGlmCarrNot6B<-exp(c(summary(modPhase2Sec)$coefficients["carriageNot6B","Estimate"],confint(modPhase2Sec)["carriageNot6B",]))
+rrGlmIntNot6B<-exp(c(summary(modPhase2Sec)$coefficients["carriageNot6BVaccine","Estimate"],confint(modPhase2Sec)["carriageNot6BVaccine",]))
+
+modResSec<-summary(modPhase2Sec)$coefficients %>%
+  as.data.frame() %>%
+  mutate(
+    parameter=case_when(
+      rownames(summary(modPhase2Sec)$coefficients)=="(Intercept)"~"(Intercept)",
+      rownames(summary(modPhase2Sec)$coefficients)=="VaccNamePCV-13"~"PCV-13 vaccine",
+      rownames(summary(modPhase2Sec)$coefficients)=="carriage"~"Phase 1 carriage (6B)",
+      rownames(summary(modPhase2Sec)$coefficients)=="carriageVaccine"~"PCV-13 vaccine : Phase 1 carriage (6B)",
+      rownames(summary(modPhase2Sec)$coefficients)=="carriageNot6B"~"Phase 1 carriage (not 6B)",
+      rownames(summary(modPhase2Sec)$coefficients)=="carriageNot6BVaccine"~"PCV-13 vaccine : Phase 1 carriage (not 6B)",
+      rownames(summary(modPhase2Sec)$coefficients)=="doseGroupCFU 20000"~"Dose: CFU 20,000",
+      rownames(summary(modPhase2Sec)$coefficients)=="doseGroupCFU 80000"~"Dose: CFU 80,000"
+    )
+  )
+
+colnames(modResSec)<-c("Estimate","Std.err","z.value","p.value","parameter")
+
+modResSec %>%
+  dplyr::select(parameter,Estimate,Std.err,z.value,p.value) %>%
+  mutate(p.value=ifelse(parameter!="(Intercept)" & p.value<0.05,cell_spec(format(nsmall=3,round(digits=3,p.value)),bold=T),cell_spec(format(nsmall=3,round(digits=3,p.value)),bold=F))) %>%
+  kable(row.names = FALSE,col.names=c("","Estimate","Std. error","Z statistic","p-value"),escape=FALSE,caption=paste(sep="","(DUMMY TABLE) Summary of the log-binomial regression model fit for phase 2 carriage (with a term for natural carriage during phase 1). The baseline carriage risk during phase 2 for a saline-randomised participant inoculated at the CFU 160,000 dose and without prior carriage (experimental or natural) is ",format(digits=1,round(digits=1,100*exp(modResSec["(Intercept)","Estimate"]))),"%, 95% CI (",paste(collapse="%, ",format(nsmall=1,round(digits=1,100*exp(c(modResSec["(Intercept)","Estimate"]-qnorm(0.975)*modResSec["(Intercept)","Std.err"],modResSec["(Intercept)","Estimate"]+qnorm(0.975)*modResSec["(Intercept)","Std.err"]))))),"%). There is ",ifelse(pGlmVacc<0.05,"a","no")," statistically significant effect of PCV-13 vaccine on the probability of serotype 6B carriage during phase 2 (RR ",format(nsmall=2,round(digits=2,rrGlmVacc[1])),", 95% CI (",paste(collapse=", ",format(nsmall=2,round(digits=2,rrGlmVacc[2:3]))),"), p ",ifelse(pGlmVacc>=0.001,paste(sep="","= ",format(nsmall=3,round(digits=3,pGlmVacc))),"< 0.001"),"). There is ",ifelse(pGlmCarr<0.05,"a","no")," statistically significant effect of prior serotype 6B carriage on the probability of serotype 6B carriage during phase 2 (RR ",format(nsmall=2,round(digits=2,rrGlmCarr[1])),", 95% CI (",paste(collapse=", ",format(nsmall=2,round(digits=2,rrGlmCarr[2:3]))),"), p ",ifelse(pGlmCarr>=0.001,paste(sep="","= ",format(nsmall=3,round(digits=3,pGlmCarr))),"< 0.001"),"). There is ",ifelse(pGlmInt<0.05,"a","no")," statistically significant interaction effect between PCV-13 vaccination and prior serotype 6B carriage on the probability of serotype 6B carriage during phase 2 (RR ",format(nsmall=2,round(digits=2,rrGlmInt[1])),", 95% CI (",paste(collapse=", ",format(nsmall=2,round(digits=2,rrGlmInt[2:3]))),"), p ",ifelse(pGlmInt>=0.001,paste(sep="","= ",format(nsmall=3,round(digits=3,pGlmInt))),"< 0.001"),"). There is ",ifelse(pGlmCarrNot6B<0.05,"a","no")," statistically significant effect of prior natural carriage on the probability of serotype 6B carriage during phase 2 (RR ",format(nsmall=2,round(digits=2,rrGlmCarrNot6B[1])),", 95% CI (",paste(collapse=", ",format(nsmall=2,round(digits=2,rrGlmCarrNot6B[2:3]))),"), p ",ifelse(pGlmCarrNot6B>=0.001,paste(sep="","= ",format(nsmall=3,round(digits=3,pGlmCarrNot6B))),"< 0.001"),"). There is ",ifelse(pGlmIntNot6B<0.05,"a","no")," statistically significant interaction effect between PCV-13 vaccination and prior natural carriage on the probability of serotype 6B carriage during phase 2 (RR ",format(nsmall=2,round(digits=2,rrGlmIntNot6B[1])),", 95% CI (",paste(collapse=", ",format(nsmall=2,round(digits=2,rrGlmIntNot6B[2:3]))),"), p ",ifelse(pGlmIntNot6B>=0.001,paste(sep="","= ",format(nsmall=3,round(digits=3,pGlmIntNot6B))),"< 0.001"),")."),digits=3) %>%
+  kable_styling(full_width = FALSE)
+```
+
+
+## Safety data
+
+We will list all reported adverse events (AEs) and serious adverse events (SAEs). As per protocol, no further differentiation into reactions or unexpected events will be made as very few AEs and SAEs are expected.
+
+If there are enough events, we will compare the frequency of events by type across study arms and inoculation doses.
+
+```{r safetyDataAllEvents}
+safeDat<-data.frame(
+  PID=sample(x=simDat$PID,replace=TRUE,size=20),
+  VaccName=NA,
+  dose=NA,
+  typeOfEvent=sample(x=c("AE","SAE"),size=20,replace=TRUE,prob=c(0.9,0.1)),
+  daysSinceVaccination=sample(x=1:70,size=20,replace=TRUE),
+  daysSinceInoculation=sample(x=c(NA,0:14),size=20,prob=c(0.05,0.15,0.22,0.18,0.1,0.08,0.04,rep(0.02,9)),replace=TRUE), # NA means before inoculation
+  description="Short description of event.",
+  treatment="Summary of treatments given, if any.",
+  notes="Any other relevant observations."
+)
+
+safeDat<-safeDat %>%
+  dplyr::mutate(
+    VaccName=simDat$VaccName[match(PID,simDat$PID)],
+    dose=simDat$dose[match(PID,simDat$PID)],
+    daysSinceVaccination=daysSinceVaccination+daysSinceInoculation
+  )
+
+safeDat<-safeDat[order(safeDat$dose,safeDat$VaccName,safeDat$PID),]
+
+safeDat %>%
+  knitr::kable(caption="(DUMMY TABLE) Listing of all clinical events reported during the study.") %>%
+  kableExtra::kable_styling(full_width = FALSE)
+
+simDat<-simDat %>%
+  dplyr::mutate(
+    aeOrSae=ifelse(PID %in% safeDat$PID,1,0),
+    ae=ifelse(PID %in% safeDat$PID[safeDat$typeOfEvent=="AE"],1,0),
+    sae=ifelse(PID %in% safeDat$PID[safeDat$typeOfEvent=="SAE"],1,0),
+  )
+```
+
+```{r safetyData2x2Tables}
+tabAeSaeArm<-table(simDat$VaccName,simDat$aeOrSae)
+tabAeSaeDose<-table(simDat$dose,simDat$aeOrSae)
+tabAeArm<-table(simDat$VaccName,simDat$ae)
+tabAeDose<-table(simDat$dose,simDat$ae)
+tabSaeArm<-table(simDat$VaccName,simDat$sae)
+tabSaeDose<-table(simDat$dose,simDat$sae)
+
+tabFull<-rbind(tabAeSaeArm,tabAeSaeDose,tabAeArm,tabAeDose,tabSaeArm,tabSaeDose)
+
+pFishAeSaeArm<-fisher.test(tabAeSaeArm)$p.value
+pFishAeSaeArm<-ifelse(pFishAeSaeArm>=0.001,paste(sep=""," = ",format(nsmall=3,round(digits=3,pFishAeSaeArm)))," < 0.001")
+pFishAeSaeDose<-fisher.test(tabAeSaeDose)$p.value
+pFishAeSaeDose<-ifelse(pFishAeSaeDose>=0.001,paste(sep=""," = ",format(nsmall=3,round(digits=3,pFishAeSaeDose)))," < 0.001")
+
+tabFull %>%
+  kable(caption=paste(sep="","(DUMMY TABLE) Safety events tabulated by study arm and inoculation dose."),col.names=c("No event","Event"),row.names=T) %>%
+  kable_styling(full_width = F) %>%
+  pack_rows(paste(sep="","Any event (AE or SAE) by study arm (Fisher test p",pFishAeSaeArm,")"),1,2) %>%
+  pack_rows(paste(sep="","Any event (AE or SAE) by inoculation dose (Fisher test p",pFishAeSaeDose,")"),3,5) %>%
+  pack_rows(paste(sep="","AEs by study arm"),6,7) %>%
+  pack_rows(paste(sep="","AEs by inoculation dose"),8,10) %>%
+    pack_rows(paste(sep="","SAEs by study arm"),11,12) %>%
+  pack_rows(paste(sep="","SAEs by inoculation dose"),13,15)
+```
+
+
+# List of figures
+
+Figure \@ref(fig:sampSizePowerGraphs): Power curves for different scenarios (power=80%) from the original sample size calculation. Dotted lines indicate agreed scenario.
+
+Figure \@ref(fig:CONSORT): CONSORT flow diagram.
+
+Figure \@ref(fig:mainObjAnalysisBarPlotStratAndAll): Serotype 6B carriage proportions per study arm and inoculation dose.
+
+Figure \@ref(fig:mainObjAnalysisLinePlotStratAndAll): Serotype 6B carriage proportions per study arm and inoculation dose at the different visits.
+
+Figure \@ref(fig:mainObjAnalysisDensityMedianIqr): Median carriage density per serotype and inoculation group.
+
+Figure \@ref(fig:mainObjAnalysisCarrDur): Mean carriage duration by serotype, study arm and visit of first carriage.
+
+Figure \@ref(fig:secObjtdAUCBoxJitterPlots): Total carriage density (tdAUC) box and jitter plots by study arm and inoculation dose.
+
+Figure \@ref(fig:secObjdensityTimeProfiles): Density time profiles by study arm and inoculation dose.
+
+Figure \@ref(fig:inoculaDensitiesPrePostAvgPlot): Boxplot, by target dose, of before and after inoculation dose measurements of the study inocula as well as the average.
+
+Figure \@ref(fig:secObjDensityComparisonScatter): Scatter plots of culture and lytA/6B density measurements by study arm, inoculation dose and serotype.
+
+Figure \@ref(fig:secObjDensityComparisonHist): Histogram of differences in log10(density + 1) measurements derived from culture and lytA/6B.
+
+Figure \@ref(fig:exploAnalysisDrcPlot): Dose-response curve estimated from the data for participants randomised to the saline arm.
+
+Figure \@ref(fig:exploObjTimeBetweenVaccAndInoc): Time between vaccination and inoculation visits overall, by study arm, inoculation dose and carriage status.
+
+# List of tables
+
+Table \@ref(tab:mainObjAnalysisParticipantCharacteristics): Participant characteristics.
+
+Table \@ref(tab:mainObjAnalysis): Carriage status by study arm (for each inoculation dose and overall).
+
+Table \@ref(tab:mainObjAnalysisModelSummary): Summary of the log-binomial regression model fit.
+
+Table \@ref(tab:mainObjAnalysisSensitivityNatCarrAnyVisit): Tabulated counts and percentages of experimental 6B carriers stratified by natural carriage (at any of visits C, E, F, G) and study arm.
+
+Table \@ref(tab:mainObjAnalysisSensitivityNatCarrVisitC): Tabulated counts and percentages of experimental 6B carriers stratified by natural carriage (at visit C) and study arm.
+
+Table \@ref(tab:mainObjAnalysisCarriageDensityGee): Results from the GEE model fit to carriage density data. Model fitted only to data from participants who were carriers at the time of each given visit.
+
+Table \@ref(tab:mainObjAnalysisCarriageDensityGee20only): Results from the GEE model fit to carriage density data from the CFU 20,000 inoculation dose group only. Model fitted only to data from participants who were carriers at the time of each given visit.
+
+Table \@ref(tab:mainObjAnalysisCarriageDensityGee80only): Results from the GEE model fit to carriage density data from the CFU 80,000 inoculation dose group only. Model fitted only to data from participants who were carriers at the time of each given visit.
+
+Table \@ref(tab:mainObjAnalysisCarriageDensityGee160only): Results from the GEE model fit to carriage density data from the CFU 160,000 inoculation dose group only. Model fitted only to data from participants who were carriers at the time of each given visit.
+
+Table \@ref(tab:secObjtdAUC): Mann-Whitney-Wilcoxon test result for comparing tdAUC between study arms by inoculation group.
+
+Table \@ref(tab:secObjNatCarr2x2): Number of participants colonised with vaccine-type S. Pneumoniae by study arm.
+
+Table \@ref(tab:secObjNatCarrMod): Summary of the log-binomial regression model fit for natural, vaccine-type carriage.
+
+Table \@ref(tab:inoculaDensitiesPrePostAvg): Medians, inter-quartile ranges (IQRs) and ranges for the inoculum dose measurements before and after inoculation. Also shown are the summaries for the average measurements.
+
+Table \@ref(tab:exploAnalysisDrc): Summary of the dose-response model fitted to data from participants randomised to saline.
+
+Table \@ref(tab:exploObjTimeEffectNot6B): Summary of the log-binomial regression model fit for natural, vaccinet-type carriage with terms for time since study start.
+
+Table \@ref(tab:exploObjTimeEffect6B): Summary of the log-binomial regression model fit for experimental serotype 6B carriage with terms for time since study start.
+
+Table \@ref(tab:phase2ModelSummary): Summary of the log-binomial regression model fit for phase 2 carriage (no term for prior carriage).
+
+Table \@ref(tab:phase2Tables2x2): Number of participants colonised with S. Pneumoniae during phase 2 by PCV-13 vaccination status and prior carriage, stratified by phase 1 inoculation dose.
+
+Table \@ref(tab:secObjPhase2): Summary of the log-binomial regression model fit for phase 2 carriage (with a term for natural carriage during phase 1).
+
+Table \@ref(tab:exploObjTimeBetweenVaccAndInoc): Median and inter-quartile range for the time between vaccination and inoculation visits overall, by study arm, inoculation dose and carriage status.
+
+Table \@ref(tab:safetyDataAllEvents): Listing of all clinical events reported during the study.
+
+Table \@ref(tab:safetyData2x2Tables): Safety events tabulated by study arm and inoculation dose.
+
+## References
