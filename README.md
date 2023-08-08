@@ -7,5 +7,6 @@ The trial has been registered with the Pan African Clinical Trials Registry (REF
 The repository contains the following files:
   - MARVELSPCV13_SAP_v1.1.Rmd - an R markdown script file containing the SAP.
   - MARVELSPCV13_SAP_v1.1.html - the html version of the SAP compiled from the *.Rmd markdown file.
+  - MARVELSPCV13_Analysis_20230307.Rmd - an R markdown script file containing the actual analysis code
 
 All R code in this repository is licensed under an MIT license. Please read the license file for full details.
